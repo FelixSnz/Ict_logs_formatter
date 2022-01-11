@@ -14,31 +14,88 @@ from tkinter import filedialog
 from tkinter.filedialog import asksaveasfile
 from tkinter.ttk import Progressbar
 
+from concurrent import futures
+from concurrent import *
+
+logs_path = str(" ")
 
 import localfuncs as lf
+
+
+thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 
 
 class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
 
+        root.geometry('500x160')
+        root.title('Logs to excel converter')
+
+        self.top_frame = tk.Frame(root, bg="white", highlightthickness=2)
+
+        self.textEntryPath = tk.StringVar()
+        self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath)
+        self.pathEntry.pack(side=tk.LEFT,  anchor=tk.NW, fill=tk.X, expand=True)
+
+        self.browseBtn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
+        self.browseBtn.pack(side=tk.LEFT,  anchor=tk.NW)
+
+        self.top_frame.pack(fill=tk.BOTH)
+
         
-        self.bottom_frame = tk.Frame(self.root, bg="white", highlightthickness=2)
-        self.pb1 = Progressbar(root, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.pb1.pack(side=tk.LEFT, anchor='sw', pady=2, padx=2)
+
+
+
+
+        self.bottom_frame = tk.Frame(root, bg="white", highlightthickness=2)
+
+        self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
+        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+
         self.status_label = tk.Label(self.bottom_frame, text=' ')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
+        self.bottom_frame.pack(fill=tk.BOTH)
+        self.status_label.config(text="waiting for the path...")
 
+        
+
+    def browse_for_path(self):
+        currdir = os.getcwd()
+        tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
+        if len(tempdir) > 0:
+            global logs_path
+            logs_path = tempdir
+            self.textEntryPath.set(tempdir)
+            global pathEntry
+
+            thread_pool_executor.submit(self.log_to_excel_process)
+            
+
+
+    def log_to_excel_process(self):
         trees1 = []
         trees2 = []
         trees3 = []
         trees4 = []
 
-        logs_path = self.browse_for_path()
+
+        counter = 0
+        all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
         
 
+        self.pb1.config(mode="determinate")
+        self.status_label.config(text="searching log files...")
+
         for fname in glob.iglob(logs_path + '**/**', recursive=True):
+
+            new = (counter * 100) / len(all_files)
+            counter += 1
+            root.update_idletasks()
+            self.pb1['value'] = new
+
+
             if os.path.isfile(fname):
                 num_lines = sum(1 for _ in open(fname))
                 with open(fname) as log_f:
@@ -106,20 +163,39 @@ class MainApplication(tk.Frame):
 
 
 
-        export_to_excel(data_dict) #al llamar esta funcion, se pide una ruta donde guardar los datos en formato xls
+        self.export_to_excel(data_dict) #al llamar esta funcion, se pide una ruta donde guardar los datos en formato xls
     
 
-    def browse_for_path(self):
-        currdir = os.getcwd()
-        tempdir = filedialog.askdirectory(initialdir=currdir, title='Please select a directory')
-        if len(tempdir) > 0:
-            return tempdir
-
-
-# def main():
-
     
+    def export_to_excel(self, data_dict):
+        counter = 0
+        dfs = []
 
+        files = [('Excel Files', '*.xlsx'), 
+             ('All Files', '*.*')]
+
+        file = asksaveasfile(filetypes = files, defaultextension = files)
+        for key, value in data_dict.items():
+            df = convert_to_dataframe(value, key)
+            dfs.append(df)
+        
+        new_dfs = []
+        for idx, df in enumerate(dfs):
+            if not df.empty:
+                new_dfs.append(df)
+
+        self.pb1.config(mode="indeterminate")
+        self.pb1.start(10)
+        with pd.ExcelWriter(file.name) as writer: 
+            for idx, df in enumerate(new_dfs):
+                status_text = "creating sheet " + "(" + str(idx+1) + "/" + str(len(new_dfs)) + ") ..."
+                self.status_label.config(text=status_text)
+                counter += 1
+                df.to_excel(writer, sheet_name='Nido '+ str(counter))  
+        
+        self.pb1.stop()
+        
+        print("Done!")
 
 
 
@@ -256,26 +332,7 @@ def trees_to_dicts(trees):
 
 
 
-def export_to_excel(data_dict):
-        counter = 0
-        dfs = []
 
-        files = [('Excel Files', '*.xlsx'), 
-             ('All Files', '*.*')]
-
-        file = asksaveasfile(filetypes = files, defaultextension = files)
-        for key, value in data_dict.items():
-            df = convert_to_dataframe(value, key)
-            dfs.append(df)
-        
-        new_dfs = []
-        for idx, df in enumerate(dfs):
-            if not df.empty:
-                new_dfs.append(df)
-        with pd.ExcelWriter(file.name) as writer: 
-            for df in new_dfs:
-                counter += 1
-                df.to_excel(writer, sheet_name='Nido '+ str(counter))  
 
                 
 
@@ -291,7 +348,7 @@ def convert_to_dataframe(data, cols):
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
     df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5]), list(cols[6]), list(cols[7])])
-    print("this is df: \n", df)
+    # print("this is df: \n", df)
     return df
 
 
