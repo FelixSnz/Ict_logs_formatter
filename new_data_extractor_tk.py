@@ -2,12 +2,14 @@
 from anytree.node.node import Node
 from anytree import RenderTree
 import tkinter as tk
+import time as tm
 
 from statistics import stdev
 from numpy.core.fromnumeric import mean
 import pandas as pd
 import glob
 import os
+import re
 
 from tkinter import filedialog
 
@@ -59,6 +61,10 @@ class MainApplication(tk.Frame):
         self.bottom_frame.pack(fill=tk.BOTH)
         self.status_label.config(text="waiting for the path...")
 
+        self.export_btn = tk.Button(self.bottom_frame, text='Export to .xlsx')
+        self.export_btn.pack(side=tk.RIGHT)
+        self.export_btn["state"] = "disabled"
+
         
 
     def browse_for_path(self):
@@ -75,30 +81,48 @@ class MainApplication(tk.Frame):
 
 
     def log_to_excel_process(self):
-        trees1 = []
-        trees2 = []
-        trees3 = []
-        trees4 = []
+        
+
+        set_of_trees = [[], [], [], []]
 
 
+        
+
+        print("init")
         counter = 0
         all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
         
 
         self.pb1.config(mode="determinate")
-        self.status_label.config(text="searching log files...")
+        self.status_label.config(text="processing log files...")
 
+        print("starting point: ", len(all_files))
+        tm.sleep(1)
         for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
             new = (counter * 100) / len(all_files)
             counter += 1
             root.update_idletasks()
             self.pb1['value'] = new
+            # print(new)
+            
 
 
             if os.path.isfile(fname):
                 num_lines = sum(1 for _ in open(fname))
                 with open(fname) as log_f:
+
+                    # start_of_log_f = log_f.name[:2]
+
+                    # if start_of_log_f == r'[1-9]-':
+                    #     raw_data = log_f.read()
+                        
+                    #     if num_lines > 26:
+                    #         tree = log_to_tree(raw_data)
+                    #         if tree != None:
+                    #             set_of_trees[int(start_of_log_f[:1])]
+                    #             trees1.append(tree)
+
 
                     
                     if '1-' in log_f.name:
@@ -108,20 +132,20 @@ class MainApplication(tk.Frame):
                         if num_lines > 26:
                             tree = log_to_tree(raw_data)
                             if tree != None:
-                                trees1.append(tree)
+                                set_of_trees[0].append(tree)
                     elif '2-' in log_f.name:
                         raw_data = log_f.read()
                         if num_lines > 26:
                             tree = log_to_tree(raw_data)
                             if tree != None:
-                                trees2.append(tree)
+                                set_of_trees[1].append(tree)
 
                     elif '3-' in log_f.name:
                         raw_data = log_f.read()
                         if num_lines > 26:
                             tree = log_to_tree(raw_data)
                             if tree != None:
-                                trees3.append(tree)
+                                set_of_trees[2].append(tree)
 
                     elif '4-' in log_f.name:
                         raw_data = log_f.read()
@@ -129,45 +153,48 @@ class MainApplication(tk.Frame):
                         if num_lines > 26:
                             tree = log_to_tree(raw_data)
                             if tree != None:
-                                trees4.append(tree)
+                                set_of_trees[3].append(tree)
                     else:
                         raw_data = log_f.read()
                         
                         if num_lines > 26:
                             tree = log_to_tree(raw_data)
                             if tree != None:
-                                trees4.append(tree)
+                                set_of_trees[3].append(tree)
 
     
         
+        print("starting last pb")
+        self.pb1.config(mode="indeterminate")
+        self.pb1.start(10)
 
+
+        data_dict = self.data_conversion(set_of_trees)
+
+
+        self.export_btn["state"] = "normal"
+        self.status_label.config(text="Export is enabled!")
+        self.export_btn.config(command=lambda : self.export_caller(data_dict))
+    
+    def data_conversion(self, set_of_trees):
         data_dict = {}
-
         #tn is refering to test_name, and sv is refering to 'set of values'
 
-        tn1, sv1 = dicts_to_excel_data(trees_to_dicts(trees1))
+        for trees in set_of_trees:
+            temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
+            data_dict[tuple(temp_tn)] = temp_sv
 
-        data_dict[tn1] = sv1
+        self.pb1.stop()
+        return data_dict
 
-        tn2, sv2 = dicts_to_excel_data(trees_to_dicts(trees2))
+        
 
-        data_dict[tn2] = sv2
-
-        tn3, sv3 = dicts_to_excel_data(trees_to_dicts(trees3))
-
-        data_dict[tn3] = sv3
-
-        tn4, sv4 = dicts_to_excel_data(trees_to_dicts(trees4))
-
-        data_dict[tuple(tn4)] = sv4
-
-
-
-        self.export_to_excel(data_dict) #al llamar esta funcion, se pide una ruta donde guardar los datos en formato xls
-    
+    def export_caller(self, dicts_data):
+        thread_pool_executor.submit(self.export_to_excel, dicts_data)
 
     
     def export_to_excel(self, data_dict):
+        self.export_btn["state"] = "disabled"
         counter = 0
         dfs = []
 
@@ -176,6 +203,7 @@ class MainApplication(tk.Frame):
 
         file = asksaveasfile(filetypes = files, defaultextension = files)
         for key, value in data_dict.items():
+            self.status_label.config(text="sorting the data...")
             df = convert_to_dataframe(value, key)
             dfs.append(df)
         
@@ -194,9 +222,62 @@ class MainApplication(tk.Frame):
                 df.to_excel(writer, sheet_name='Nido '+ str(counter))  
         
         self.pb1.stop()
+        self.export_btn["state"] = "normal"
         
-        print("Done!")
+        self.status_label.config(text="Done!")
 
+    def dicts_to_excel_data(self, dicts):
+        # print("this are the dicts: ", dicts)
+        
+        test_names = []
+
+        for dict in get_dicts_only(dicts):
+            # print("this should be a dict: ", )
+            for test_name in dict.keys():
+                # print(test_name)
+                if not test_name in test_names:
+                    test_names.append(test_name)
+            
+        set_of_values = []
+        sample_count = 0
+        for dict in get_dicts_only(dicts):
+            sample_count += 1
+            values = []
+            for test_name in test_names:
+                if not test_name in list(dict.keys()):
+                    # print('NOT FOUND ------------------------')
+                    values.append("NONE")
+                else:
+                    # print("si hay -----------------------------")
+                    values.append(dict[test_name][0])
+
+            serial  = get_serials_only(dicts)[get_dicts_only(dicts).index(dict)]
+            # print("this is a serial: ", serial)
+            values.insert(0, serial)
+            set_of_values.append(values)
+        
+        low_limits = lf.get_limits(dicts)
+        # print("ll len: ", len(low_limits))
+        
+        high_limits = lf.get_limits(dicts, False)
+        # print("hl len: ", len(high_limits))
+
+        max_values = lf.get_maxs(dicts)
+        # print("max len: ", len(max_values))
+        min_values = lf.get_mins(dicts)
+        # print("min len: ", len(min_values))
+
+        mean_values = lf.get_means(dicts)
+        # print("mean len: ", len(mean_values))
+        stdev_values = lf.get_stdevs(dicts)
+        # print("stdev len: ", len(stdev_values))
+
+        cpk_values = lf.cpks(high_limits, mean_values, stdev_values, low_limits)
+        # print("cpk len: ", len(cpk_values))
+
+        test_names.insert(0, "Test names")
+
+        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(stdev_values), tuple(cpk_values), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
 
 
 
@@ -216,62 +297,6 @@ def get_serials_only(dicts):
         serials_only.append(d[0])
     return serials_only
 
-def dicts_to_excel_data(dicts):
-    # print("this are the dicts: ", dicts)
-
-    
-
-    
-    
-    test_names = []
-
-    for dict in get_dicts_only(dicts):
-        # print("this should be a dict: ", )
-        for test_name in dict.keys():
-            # print(test_name)
-            if not test_name in test_names:
-                test_names.append(test_name)
-        
-    set_of_values = []
-    sample_count = 0
-    for dict in get_dicts_only(dicts):
-        sample_count += 1
-        values = []
-        for test_name in test_names:
-            if not test_name in list(dict.keys()):
-                # print('NOT FOUND ------------------------')
-                values.append("NONE")
-            else:
-                # print("si hay -----------------------------")
-                values.append(dict[test_name][0])
-
-        serial  = get_serials_only(dicts)[get_dicts_only(dicts).index(dict)]
-        # print("this is a serial: ", serial)
-        values.insert(0, serial)
-        set_of_values.append(values)
-    
-    low_limits = lf.get_limits(dicts)
-    # print("ll len: ", len(low_limits))
-    
-    high_limits = lf.get_limits(dicts, False)
-    # print("hl len: ", len(high_limits))
-
-    max_values = lf.get_maxs(dicts)
-    # print("max len: ", len(max_values))
-    min_values = lf.get_mins(dicts)
-    # print("min len: ", len(min_values))
-
-    mean_values = lf.get_means(dicts)
-    # print("mean len: ", len(mean_values))
-    stdev_values = lf.get_stdevs(dicts)
-    # print("stdev len: ", len(stdev_values))
-
-    cpk_values = lf.cpks(high_limits, mean_values, stdev_values, low_limits)
-    # print("cpk len: ", len(cpk_values))
-
-    test_names.insert(0, "Test names")
-
-    return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(stdev_values), tuple(cpk_values), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
 
 
 
@@ -348,7 +373,7 @@ def convert_to_dataframe(data, cols):
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
     df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5]), list(cols[6]), list(cols[7])])
-    # print("this is df: \n", df)
+    print("this is df: \n", df)
     return df
 
 
@@ -472,12 +497,16 @@ def log_to_tree(raw_data:str):
 
                 new_sub_dataset = []
 
-
+                let_continue = False
                 #this loop passes data without mesurments and keeps foreward data with mesurements
                 for sub_data in new_data[idx+1:]:
                     if len(sub_data) > 1:
                         name = sub_data[1:sub_data.index("|")]
                         ind_data = sub_data.split('|')
+
+                        # if '@RTP' in ind_data[2]:
+                        #     let_continue = True
+                        #     break
 
                         if "@A" in ind_data[2]:
                             if name.startswith("@"):
@@ -486,7 +515,9 @@ def log_to_tree(raw_data:str):
                                 pass
                             new_sub_dataset.append(sub_data)
                         # print("name: ", ind_data)
-
+                if let_continue:
+                    pass
+                    # continue
 
                 for sub_data in new_sub_dataset:
                     # print("this is subdata: ", sub_data)
