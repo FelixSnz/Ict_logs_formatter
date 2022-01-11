@@ -507,14 +507,14 @@ def log_to_tree(raw_data:str):
                         # if '@RTP' in ind_data[2]:
                         #     let_continue = True
                         #     break
-
-                        if "@A" in ind_data[2]:
-                            if name.startswith("@"):
-                                sub_data = sub_data[1:]
-                            else:
-                                pass
-                            new_sub_dataset.append(sub_data)
-                        # print("name: ", ind_data)
+                        if len(ind_data) > 2:
+                            if "@A" in ind_data[2]:
+                                if name.startswith("@"):
+                                    sub_data = sub_data[1:]
+                                else:
+                                    pass
+                                new_sub_dataset.append(sub_data)
+                            # print("name: ", ind_data)
                 if let_continue:
                     pass
                     # continue
