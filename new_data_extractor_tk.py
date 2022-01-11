@@ -18,103 +18,114 @@ from tkinter.ttk import Progressbar
 import localfuncs as lf
 
 
-# class MainApplication(tk.Frame):
-#     def __init__(self, root, *args, **kwargs):
-#         tk.Frame.__init__(self, root, *args, **kwargs)
+class MainApplication(tk.Frame):
+    def __init__(self, root, *args, **kwargs):
+        tk.Frame.__init__(self, root, *args, **kwargs)
 
-#         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
-#         self.pb1.pack(side=tk.LEFT, anchor='sw', pady=2, padx=2)
-#         pass
+        
+        self.bottom_frame = tk.Frame(self.root, bg="white", highlightthickness=2)
+        self.pb1 = Progressbar(root, orient=tk.HORIZONTAL, length=300, mode='determinate')
+        self.pb1.pack(side=tk.LEFT, anchor='sw', pady=2, padx=2)
+        self.status_label = tk.Label(self.bottom_frame, text=' ')
+        self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
 
-def main():
+        trees1 = []
+        trees2 = []
+        trees3 = []
+        trees4 = []
 
-    trees1 = []
-    trees2 = []
-    trees3 = []
-    trees4 = []
+        logs_path = self.browse_for_path()
+        
 
-    logs_path = browse_for_path()
+        for fname in glob.iglob(logs_path + '**/**', recursive=True):
+            if os.path.isfile(fname):
+                num_lines = sum(1 for _ in open(fname))
+                with open(fname) as log_f:
 
-    for fname in glob.iglob(logs_path + '**/**', recursive=True):
-        if os.path.isfile(fname):
-            num_lines = sum(1 for _ in open(fname))
-            with open(fname) as log_f:
-
-                
-                if '1-' in log_f.name:
                     
-                    raw_data = log_f.read()
-                    
-                    if num_lines > 26:
-                        tree = log_to_tree(raw_data)
-                        if tree != None:
-                            trees1.append(tree)
-                elif '2-' in log_f.name:
-                    raw_data = log_f.read()
-                    if num_lines > 26:
-                        tree = log_to_tree(raw_data)
-                        if tree != None:
-                            trees2.append(tree)
+                    if '1-' in log_f.name:
+                        
+                        raw_data = log_f.read()
+                        
+                        if num_lines > 26:
+                            tree = log_to_tree(raw_data)
+                            if tree != None:
+                                trees1.append(tree)
+                    elif '2-' in log_f.name:
+                        raw_data = log_f.read()
+                        if num_lines > 26:
+                            tree = log_to_tree(raw_data)
+                            if tree != None:
+                                trees2.append(tree)
 
-                elif '3-' in log_f.name:
-                    raw_data = log_f.read()
-                    if num_lines > 26:
-                        tree = log_to_tree(raw_data)
-                        if tree != None:
-                            trees3.append(tree)
+                    elif '3-' in log_f.name:
+                        raw_data = log_f.read()
+                        if num_lines > 26:
+                            tree = log_to_tree(raw_data)
+                            if tree != None:
+                                trees3.append(tree)
 
-                elif '4-' in log_f.name:
-                    raw_data = log_f.read()
-                    
-                    if num_lines > 26:
-                        tree = log_to_tree(raw_data)
-                        if tree != None:
-                            trees4.append(tree)
-                else:
-                    raw_data = log_f.read()
-                    
-                    if num_lines > 26:
-                        tree = log_to_tree(raw_data)
-                        if tree != None:
-                            trees4.append(tree)
-
+                    elif '4-' in log_f.name:
+                        raw_data = log_f.read()
+                        
+                        if num_lines > 26:
+                            tree = log_to_tree(raw_data)
+                            if tree != None:
+                                trees4.append(tree)
+                    else:
+                        raw_data = log_f.read()
+                        
+                        if num_lines > 26:
+                            tree = log_to_tree(raw_data)
+                            if tree != None:
+                                trees4.append(tree)
 
     
+        
 
-    data_dict = {}
+        data_dict = {}
 
-    #tn is refering to test_name, and sv is refering to 'set of values'
+        #tn is refering to test_name, and sv is refering to 'set of values'
 
-    tn1, sv1 = dicts_to_excel_data(trees_to_dicts(trees1))
+        tn1, sv1 = dicts_to_excel_data(trees_to_dicts(trees1))
 
-    data_dict[tn1] = sv1
+        data_dict[tn1] = sv1
 
-    tn2, sv2 = dicts_to_excel_data(trees_to_dicts(trees2))
+        tn2, sv2 = dicts_to_excel_data(trees_to_dicts(trees2))
 
-    data_dict[tn2] = sv2
+        data_dict[tn2] = sv2
 
-    tn3, sv3 = dicts_to_excel_data(trees_to_dicts(trees3))
+        tn3, sv3 = dicts_to_excel_data(trees_to_dicts(trees3))
 
-    data_dict[tn3] = sv3
+        data_dict[tn3] = sv3
 
-    tn4, sv4 = dicts_to_excel_data(trees_to_dicts(trees4))
+        tn4, sv4 = dicts_to_excel_data(trees_to_dicts(trees4))
 
-    data_dict[tuple(tn4)] = sv4
-
-
-
-    export_to_excel(data_dict) #al llamar esta funcion, se pide una ruta donde guardar los datos en formato xls
+        data_dict[tuple(tn4)] = sv4
 
 
-def browse_for_path():
+
+        export_to_excel(data_dict) #al llamar esta funcion, se pide una ruta donde guardar los datos en formato xls
+    
+
+    def browse_for_path(self):
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
+            return tempdir
+
+
+# def main():
+
+    
+
+
+
 
 
         
-            return tempdir
+            
 
 def get_dicts_only(dicts):
     dicts_only = []
@@ -499,8 +510,10 @@ def log_to_tree(raw_data:str):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    # main = MainApplication(root)
-    main()
+    
+    main = MainApplication(root)
+    root.mainloop()
+    
 
 
 
