@@ -58,12 +58,22 @@ class MainApplication(tk.Frame):
         self.status_label = tk.Label(self.bottom_frame, text=' ')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
-        self.bottom_frame.pack(fill=tk.BOTH)
+        self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.status_label.config(text="waiting for the path...")
 
-        self.export_btn = tk.Button(self.bottom_frame, text='Export to .xlsx')
+        self.middle_frame = tk.Frame(root, bg="white", highlightthickness=2)
+
+        
+
+        self.export_btn = tk.Button(self.middle_frame, text='Export to .xlsx')
         self.export_btn.pack(side=tk.RIGHT)
         self.export_btn["state"] = "disabled"
+
+        self.can_show_fails = tk.IntVar()
+        self.check_btn_showerror = tk.Checkbutton(self.middle_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
+        self.check_btn_showerror.pack(side=tk.RIGHT)
+
+        self.middle_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
 
         
 
@@ -130,20 +140,37 @@ class MainApplication(tk.Frame):
                         raw_data = log_f.read()
                         
                         if num_lines > 26:
-                            tree = log_to_tree(raw_data)
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
                             if tree != None:
                                 set_of_trees[0].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
+                            if tree != None:
+                                set_of_trees[0].append(tree)
+
                     elif '2-' in log_f.name:
                         raw_data = log_f.read()
                         if num_lines > 26:
-                            tree = log_to_tree(raw_data)
+                            tree = self.log_to_tree(raw_data)
+                            if tree != None:
+                                set_of_trees[1].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
                             if tree != None:
                                 set_of_trees[1].append(tree)
 
                     elif '3-' in log_f.name:
                         raw_data = log_f.read()
                         if num_lines > 26:
-                            tree = log_to_tree(raw_data)
+                            tree = self.log_to_tree(raw_data)
+                            if tree != None:
+                                set_of_trees[2].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
                             if tree != None:
                                 set_of_trees[2].append(tree)
 
@@ -151,14 +178,24 @@ class MainApplication(tk.Frame):
                         raw_data = log_f.read()
                         
                         if num_lines > 26:
-                            tree = log_to_tree(raw_data)
+                            tree = self.log_to_tree(raw_data)
+                            if tree != None:
+                                set_of_trees[3].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
                             if tree != None:
                                 set_of_trees[3].append(tree)
                     else:
                         raw_data = log_f.read()
                         
                         if num_lines > 26:
-                            tree = log_to_tree(raw_data)
+                            tree = self.log_to_tree(raw_data)
+                            if tree != None:
+                                set_of_trees[3].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
                             if tree != None:
                                 set_of_trees[3].append(tree)
 
@@ -167,6 +204,7 @@ class MainApplication(tk.Frame):
         print("starting last pb")
         self.pb1.config(mode="indeterminate")
         self.pb1.start(10)
+        # print("this are the set of trees: ", set_of_trees)
 
 
         data_dict = self.data_conversion(set_of_trees)
@@ -177,6 +215,8 @@ class MainApplication(tk.Frame):
         self.export_btn.config(command=lambda : self.export_caller(data_dict))
     
     def data_conversion(self, set_of_trees):
+
+        # print("this are the set of trees: ", set_of_trees)
         data_dict = {}
         #tn is refering to test_name, and sv is refering to 'set of values'
 
@@ -279,7 +319,224 @@ class MainApplication(tk.Frame):
 
         return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(stdev_values), tuple(cpk_values), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
 
+    def log_to_tree(self, raw_data:str):
 
+
+        if raw_data[2:7] != 'BATCH':
+            raw_data = raw_data[raw_data.find("{@BATCH"):]
+
+
+
+        root = Node('root')
+
+        extract_data = ""
+
+
+
+        prev_name = ''
+        blck_counter = 0
+        for idx, char in enumerate(raw_data):
+
+            if char == '{':
+
+                name = raw_data[idx+2:raw_data.index("|", idx)]
+
+                
+
+                # print("name of line: ", name)
+
+                if name == 'BLOCK':
+                    blck_counter += 1
+
+
+                
+                # print("name of line: ", name)
+                if prev_name == 'BTEST':
+                    # print(name)
+                    extract_data += '\n'
+                
+                elif prev_name == 'BATCH' and name == 'BTEST':
+                    pass
+                    # extract_data += '\n'
+                elif prev_name == 'BATCH':
+                    extract_data += '\n'
+
+
+                
+                prev_name = name
+
+                
+            elif char == '}':
+                pass
+                
+            else:
+                extract_data += char
+        
+        if blck_counter == 0:
+            # print("block counter: ", blck_counter)
+            return None
+            
+        new_data_ = extract_data.split("\n\n")
+
+
+        btch_count = 0
+
+        # print("this is new data: ", new_data_)
+
+
+
+
+        # print("about to show lines")
+        new_data = []
+        for line in new_data_:
+            # print(line)
+            
+            name = line[1:3]
+            
+
+            if 'ET' in line:
+                pass
+            elif name == 'PF' or name == 'TS':
+                pass
+            elif line[1:6] == 'BTEST':
+                # print("this line has the serial: ", line)
+                pass
+            elif line[1:5] == 'TJET':
+                pass
+            else:
+
+                new_data.append(line)
+
+        # print("this is new data: ", new_data)
+
+
+
+        for idx, data in enumerate(new_data):
+
+
+            if len(data) > 1:
+                name = data[1:data.index("|", 1)]
+                serial_ = ""
+                if name == 'BATCH' or name == '@BATCH':
+
+                    
+
+
+                    btch_count += 1
+                    blck_count = 0
+
+                    if name == '@BATCH':
+                        name = name[1:]
+
+                    separated_batch_data = data.split("|")
+                    # print("this is the separated batch data: ", separated_batch_data)
+                    # print("------------------------------------------")
+
+                    serial_ = separated_batch_data[15] # the value with the index 15 has the serial
+
+                    temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_)
+
+                    
+
+                    let_continue = False
+                    #this loop passes data without mesurments and keeps foreward data with mesurements
+
+
+                    if not self.can_show_fails.get():
+                        new_sub_dataset = []
+                        for sub_data in new_data[idx+1:]:
+                            if len(sub_data) > 1:
+                                name = sub_data[1:sub_data.index("|")]
+                                ind_data = sub_data.split('|')
+
+                                # if '@RTP' in ind_data[2]:
+                                #     let_continue = True
+                                #     break
+                                if len(ind_data) > 2:
+                                    if "@A" in ind_data[2]:
+                                        if name.startswith("@"):
+                                            sub_data = sub_data[1:]
+                                        else:
+                                            pass
+                                        new_sub_dataset.append(sub_data)
+                                    # print("name: ", ind_data)
+                        # new_sub_dataset.insert(0, 0)
+                        new_data = new_sub_dataset
+                    if let_continue:
+                        pass
+                        # continue
+
+                    for sub_data in new_data:
+                        print("this is subdata: ", sub_data)
+                        if len(sub_data) > 1:
+                            name = sub_data[1:sub_data.index("|")]
+                            # print('this is spmething: ', name)
+                            if name == 'BLOCK':
+
+                                blck_count += 1
+
+                                block_data = sub_data.split('\n')[1:]
+
+                                t_name = sub_data.split('\n')[0].split('|')[1]
+
+                                temp_blck = Node(name + str(blck_count), parent=temp_btch_node, test_name=t_name)
+
+                                for b_data in block_data:
+                                    # print("this is b data", b_data)
+                                    ind_data = b_data.split('|') # indidual data or separated data 
+                                    
+                                    
+
+                                    new_ind_data = [] #re-process data to be separated again if necessary
+
+                                    for d in ind_data:
+
+
+                                        if 'LIM' in d:
+                                            split_d = d.split("@")
+                                            for sd in split_d:
+                                                new_ind_data.append(sd)
+                                        else:
+                                            new_ind_data.append(d)
+
+                                    
+                                    # print("this is the new individual data: ", new_ind_data)
+
+                                    ind_data = new_ind_data
+
+                                    if len(ind_data) > 2:
+
+                                        if 'LIM' in ind_data[3]:
+
+                                            comp_name = ind_data[0][3:] #anade el nombre del componente
+                                        
+                                        else:
+
+
+                                            comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
+
+
+                                        temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
+
+                                        limit_name = ''
+
+                                        for d in ind_data:
+
+                                            if 'LIM' in d:
+                                                limit_name = d
+
+                                        
+                                        if not limit_name == '':
+                                            limits = ind_data[-int(limit_name[-1]):]
+                                            temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
+
+                            else:
+                                pass
+
+
+        # print("this is the root", RenderTree(root))
+
+        return root
 
         
             
@@ -344,32 +601,14 @@ def trees_to_dicts(trees):
             # print("this is the serial before append: ", serial)
             dicts.append([batch.serial, dict])
             # batch_dict[serial] = dict
-            # dicts.append(batch_dict[serial])
-        
-
-
-        
-
-
-
+            # dicts.append(batch_dict[serial])   
     return dicts
 
 
 
 
 
-
-                
-
-
-
-
-
-
 def convert_to_dataframe(data, cols):
-
-
-    
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
     df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5]), list(cols[6]), list(cols[7])])
@@ -378,218 +617,7 @@ def convert_to_dataframe(data, cols):
 
 
 
-def log_to_tree(raw_data:str):
 
-
-    if raw_data[2:7] != 'BATCH':
-        raw_data = raw_data[raw_data.find("{@BATCH"):]
-
-
-
-    root = Node('root')
-
-    extract_data = ""
-
-
-
-    prev_name = ''
-    blck_counter = 0
-    for idx, char in enumerate(raw_data):
-
-        if char == '{':
-
-            name = raw_data[idx+2:raw_data.index("|", idx)]
-
-            
-
-            # print("name of line: ", name)
-
-            if name == 'BLOCK':
-                blck_counter += 1
-
-
-            
-            # print("name of line: ", name)
-            if prev_name == 'BTEST':
-                # print(name)
-                extract_data += '\n'
-            
-            elif prev_name == 'BATCH' and name == 'BTEST':
-                pass
-                # extract_data += '\n'
-            elif prev_name == 'BATCH':
-                extract_data += '\n'
-
-
-            
-            prev_name = name
-
-            
-        elif char == '}':
-            pass
-            
-        else:
-            extract_data += char
-    
-    if blck_counter == 0:
-        # print("block counter: ", blck_counter)
-        return None
-        
-    new_data_ = extract_data.split("\n\n")
-
-
-    btch_count = 0
-
-    # print("this is new data: ", new_data_)
-
-
-
-
-    # print("about to show lines")
-    new_data = []
-    for line in new_data_:
-        # print(line)
-        
-        name = line[1:3]
-        
-
-        if 'ET' in line:
-            pass
-        elif name == 'PF' or name == 'TS':
-            pass
-        elif line[1:6] == 'BTEST':
-            # print("this line has the serial: ", line)
-            pass
-        elif line[1:5] == 'TJET':
-            pass
-        else:
-
-            new_data.append(line)
-
-    # print("this is new data: ", new_data)
-
-
-
-    for idx, data in enumerate(new_data):
-
-
-        if len(data) > 1:
-            name = data[1:data.index("|", 1)]
-            serial_ = ""
-            if name == 'BATCH' or name == '@BATCH':
-
-                
-
-
-                btch_count += 1
-                blck_count = 0
-
-                if name == '@BATCH':
-                    name = name[1:]
-
-                separated_batch_data = data.split("|")
-                # print("this is the separated batch data: ", separated_batch_data)
-                # print("------------------------------------------")
-
-                serial_ = separated_batch_data[15] # the value with the index 15 has the serial
-
-                temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_)
-
-                new_sub_dataset = []
-
-                let_continue = False
-                #this loop passes data without mesurments and keeps foreward data with mesurements
-                for sub_data in new_data[idx+1:]:
-                    if len(sub_data) > 1:
-                        name = sub_data[1:sub_data.index("|")]
-                        ind_data = sub_data.split('|')
-
-                        # if '@RTP' in ind_data[2]:
-                        #     let_continue = True
-                        #     break
-                        if len(ind_data) > 2:
-                            if "@A" in ind_data[2]:
-                                if name.startswith("@"):
-                                    sub_data = sub_data[1:]
-                                else:
-                                    pass
-                                new_sub_dataset.append(sub_data)
-                            # print("name: ", ind_data)
-                if let_continue:
-                    pass
-                    # continue
-
-                for sub_data in new_sub_dataset:
-                    # print("this is subdata: ", sub_data)
-                    if len(sub_data) > 1:
-                        name = sub_data[1:sub_data.index("|")]
-                        # print('this is spmething: ', name)
-                        if name == 'BLOCK':
-
-                            blck_count += 1
-
-                            block_data = sub_data.split('\n')[1:]
-
-                            t_name = sub_data.split('\n')[0].split('|')[1]
-
-                            temp_blck = Node(name + str(blck_count), parent=temp_btch_node, test_name=t_name)
-
-                            for b_data in block_data:
-                                # print("this is b data", b_data)
-                                ind_data = b_data.split('|') # indidual data or separated data 
-                                
-                                
-
-                                new_ind_data = [] #re-process data to be separated again if necessary
-
-                                for d in ind_data:
-
-
-                                    if 'LIM' in d:
-                                        split_d = d.split("@")
-                                        for sd in split_d:
-                                            new_ind_data.append(sd)
-                                    else:
-                                        new_ind_data.append(d)
-
-                                
-                                # print("this is the new individual data: ", new_ind_data)
-
-                                ind_data = new_ind_data
-
-                                if len(ind_data) > 2:
-
-                                    if 'LIM' in ind_data[3]:
-
-                                        comp_name = ind_data[0][3:] #anade el nombre del componente
-                                    
-                                    else:
-
-
-                                        comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
-
-
-                                    temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
-
-                                    limit_name = ''
-
-                                    for d in ind_data:
-
-                                        if 'LIM' in d:
-                                            limit_name = d
-
-                                    
-                                    if not limit_name == '':
-                                        limits = ind_data[-int(limit_name[-1]):]
-                                        temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
-
-                        else:
-                            pass
-
-
-    # print("this is the root", RenderTree(root))
-
-    return root
 
 
 
