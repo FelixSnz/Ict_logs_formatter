@@ -33,12 +33,16 @@ class MainApplication(tk.Frame):
 
         root.geometry('500x160')
         root.title('Logs to excel converter')
+        root.configure(background='gray94')
 
-        self.top_frame = tk.Frame(root, bg="white", highlightthickness=2)
+        self.top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+
+        self.path_label = tk.Label(self.top_frame, text='Logs path: ', bg='gray94')
+        self.path_label.pack(side=tk.LEFT)
 
         self.textEntryPath = tk.StringVar()
-        self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath)
-        self.pathEntry.pack(side=tk.LEFT,  anchor=tk.NW, fill=tk.X, expand=True)
+        self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath, bg='white')
+        self.pathEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         self.browseBtn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
         self.browseBtn.pack(side=tk.LEFT,  anchor=tk.NW)
@@ -48,24 +52,24 @@ class MainApplication(tk.Frame):
         
 
 
+        self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
-
-        self.bottom_frame = tk.Frame(root, bg="white", highlightthickness=2)
+        self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, expand=True, pady=2, padx=2)
 
-        self.status_label = tk.Label(self.bottom_frame, text=' ')
+        self.status_label = tk.Label(self.middle_frame, text=' ', bg='gray94')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.status_label.config(text="waiting for the path...")
 
-        self.middle_frame = tk.Frame(root, bg="white", highlightthickness=2)
+        
 
         
 
-        self.export_btn = tk.Button(self.middle_frame, text='Export to .xlsx')
+        self.export_btn = tk.Button(self.middle_frame, text='Export to .xlsx', bg='white')
         self.export_btn.pack(side=tk.RIGHT)
         self.export_btn["state"] = "disabled"
 
@@ -212,6 +216,8 @@ class MainApplication(tk.Frame):
 
         self.export_btn["state"] = "normal"
         self.status_label.config(text="Export is enabled!")
+        self.pb1.config(mode="determinate")
+        self.pb1['value'] = 100
         self.export_btn.config(command=lambda : self.export_caller(data_dict))
     
     def data_conversion(self, set_of_trees):
@@ -264,7 +270,8 @@ class MainApplication(tk.Frame):
         self.pb1.stop()
         self.export_btn["state"] = "normal"
         
-        self.status_label.config(text="Done!")
+        self.status_label.config(text="Done!", bg='green')
+        self.pb1.config(mode="determinate")
 
     def dicts_to_excel_data(self, dicts):
         # print("this are the dicts: ", dicts)
