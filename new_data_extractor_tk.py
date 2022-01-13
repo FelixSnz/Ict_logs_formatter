@@ -18,6 +18,9 @@ from tkinter.ttk import Progressbar
 
 from concurrent import futures
 from concurrent import *
+import os
+import subprocess
+FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 logs_path = str(" ")
 
@@ -35,8 +38,21 @@ class MainApplication(tk.Frame):
         root.title('Logs to excel converter')
         root.configure(background='gray94')
 
-        self.top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        
+        self.upper_top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.export_btn = tk.Button(self.upper_top_frame, text='Export to excel')
+        self.export_btn.pack(side=tk.RIGHT)
+        self.export_btn["state"] = "disabled"
 
+        self.opn_excel_loc = tk.Button(self.upper_top_frame, text='Open excel location')
+
+        self.can_show_fails = tk.IntVar()
+        self.check_btn_showerror = tk.Checkbutton(self.upper_top_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
+        self.check_btn_showerror.pack(side=tk.RIGHT)
+
+        self.upper_top_frame.pack(fill=tk.BOTH)
+
+        self.top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.path_label = tk.Label(self.top_frame, text='Logs path: ', bg='gray94')
         self.path_label.pack(side=tk.LEFT)
 
@@ -49,39 +65,36 @@ class MainApplication(tk.Frame):
 
         self.top_frame.pack(fill=tk.BOTH)
 
+
+        self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+
         
 
 
-        self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        
 
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, expand=True, pady=2, padx=2)
+        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
         self.status_label = tk.Label(self.middle_frame, text=' ', bg='gray94')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
-        self.status_label.config(text="waiting for the path...")
+        self.status_label.config(text="waiting for the path...", bg='gray94')
 
         
 
         
 
-        self.export_btn = tk.Button(self.middle_frame, text='Export to .xlsx', bg='white')
-        self.export_btn.pack(side=tk.RIGHT)
-        self.export_btn["state"] = "disabled"
-
-        self.can_show_fails = tk.IntVar()
-        self.check_btn_showerror = tk.Checkbutton(self.middle_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
-        self.check_btn_showerror.pack(side=tk.RIGHT)
-
+       
         self.middle_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
 
         
 
     def browse_for_path(self):
+        self.status_label.config(text="waiting for the path...", bg='gray94')
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
@@ -109,6 +122,7 @@ class MainApplication(tk.Frame):
 
         self.pb1.config(mode="determinate")
         self.status_label.config(text="processing log files...")
+        self.opn_excel_loc.forget()
 
         print("starting point: ", len(all_files))
         tm.sleep(1)
@@ -271,6 +285,8 @@ class MainApplication(tk.Frame):
         self.export_btn["state"] = "normal"
         
         self.status_label.config(text="Done!", bg='green')
+        self.opn_excel_loc.config(command=lambda:explore(file.name))
+        self.opn_excel_loc.pack(side=tk.LEFT)
         self.pb1.config(mode="determinate")
 
     def dicts_to_excel_data(self, dicts):
@@ -316,15 +332,15 @@ class MainApplication(tk.Frame):
 
         mean_values = lf.get_means(dicts)
         # print("mean len: ", len(mean_values))
-        stdev_values = lf.get_stdevs(dicts)
+        # stdev_values = lf.get_stdevs(dicts)
         # print("stdev len: ", len(stdev_values))
 
-        cpk_values = lf.cpks(high_limits, mean_values, stdev_values, low_limits)
+        # cpk_values = lf.cpks(high_limits, mean_values, stdev_values, low_limits)
         # print("cpk len: ", len(cpk_values))
 
         test_names.insert(0, "Test names")
 
-        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(stdev_values), tuple(cpk_values), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
+        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
 
     def log_to_tree(self, raw_data:str):
 
@@ -618,18 +634,19 @@ def trees_to_dicts(trees):
 def convert_to_dataframe(data, cols):
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
-    df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5]), list(cols[6]), list(cols[7])])
+    df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5])])
     print("this is df: \n", df)
     return df
 
 
+def explore(path):
+    # explorer would choke on forward slashes
+    path = os.path.normpath(path)
 
-
-
-
-
-
-
+    if os.path.isdir(path):
+        subprocess.run([FILEBROWSER_PATH, path])
+    elif os.path.isfile(path):
+        subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
 
 if __name__ == "__main__":
     root = tk.Tk()
