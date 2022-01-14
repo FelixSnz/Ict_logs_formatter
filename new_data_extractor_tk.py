@@ -137,9 +137,7 @@ class MainApplication(tk.Frame):
 
 
     def browse_for_path(self):
-        if self.preview_table != None:
-            self.preview_table.destroy()
-            self.table_tittle.destroy()
+        
         # self.preview_table.delete(*self.preview_table.get_children())
         global dicts_counter
         dicts_counter = 0
@@ -160,6 +158,14 @@ class MainApplication(tk.Frame):
 
 
     def log_to_excel_process(self):
+
+        if self.preview_table != None:
+            self.preview_table.destroy()
+            self.table_tittle.destroy()
+
+        self.convert_btn["state"] = "disabled"
+        self.browse_btn["state"] = "disabled"
+        self.export_btn["state"] = "disabled"
         
 
         set_of_trees = [[], [], [], []]
@@ -288,6 +294,8 @@ class MainApplication(tk.Frame):
 
 
         self.export_btn["state"] = "normal"
+        self.convert_btn["state"] = "normal"
+        self.browse_btn["state"] = "normal"
         self.status_label.config(text="Export is enabled!")
         self.pb1.config(mode="determinate")
         self.pb1['value'] = 100
@@ -313,7 +321,11 @@ class MainApplication(tk.Frame):
 
     
     def export_to_excel(self, data_dict):
+        self.status_label.config(text=" ", bg='gray94')
+        self.convert_btn["state"] = "disabled"
+        self.browse_btn["state"] = "disabled"
         self.export_btn["state"] = "disabled"
+        self.opn_excel_loc.forget()
         counter = 0
         dfs = []
 
@@ -342,6 +354,9 @@ class MainApplication(tk.Frame):
         
         self.pb1.stop()
         self.export_btn["state"] = "normal"
+        self.convert_btn["state"] = "normal"
+        self.browse_btn["state"] = "normal"
+
         
         self.status_label.config(text="Done!", bg='green')
         self.opn_excel_loc.config(command=lambda:explore(file.name))
