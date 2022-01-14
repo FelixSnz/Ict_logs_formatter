@@ -10,6 +10,7 @@ import pandas as pd
 import glob
 import os
 import re
+import numpy as np
 
 from tkinter import filedialog
 
@@ -25,6 +26,8 @@ FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 logs_path = str(" ")
 
 import localfuncs as lf
+
+dicts_counter = 0
 
 
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
@@ -68,6 +71,11 @@ class MainApplication(tk.Frame):
 
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
+        self.preview_table = tk.ttk.Treeview(self.middle_frame)
+        self.preview_table.pack(fill=tk.BOTH, expand=True)
+
+        
+
         
 
 
@@ -76,9 +84,9 @@ class MainApplication(tk.Frame):
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.pb1.pack(side=tk.BOTTOM, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.status_label = tk.Label(self.middle_frame, text=' ', bg='gray94')
+        self.status_label = tk.Label(self.bottom_frame, text=' ', bg='gray94')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
@@ -89,11 +97,13 @@ class MainApplication(tk.Frame):
         
 
        
-        self.middle_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
+        self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
         
 
     def browse_for_path(self):
+        global dicts_counter
+        dicts_counter = 0
         self.status_label.config(text="waiting for the path...", bg='gray94')
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
@@ -290,6 +300,8 @@ class MainApplication(tk.Frame):
         self.pb1.config(mode="determinate")
 
     def dicts_to_excel_data(self, dicts):
+        global dicts_counter
+        
         # print("this are the dicts: ", dicts)
         
         test_names = []
@@ -340,7 +352,34 @@ class MainApplication(tk.Frame):
 
         test_names.insert(0, "Test names")
 
-        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values) ]), set_of_values
+        
+
+        self.preview_table['columns']= test_names
+        self.preview_table.column("#0", width=0,  stretch=tk.NO)
+        self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+
+        
+        if dicts_counter < 1:
+            try:
+                for test_name in test_names[:10]:
+                    self.preview_table.column(test_name ,anchor=tk.CENTER, stretch=0)
+                    self.preview_table.heading(test_name,text=test_name,anchor=tk.CENTER)
+                    tm.sleep(0.5)
+                tm.sleep(0.5)
+                for idx, vals in enumerate(np.array(set_of_values)[:,:10]):
+                    self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
+                    tm.sleep(0.5)    
+                
+            except Exception as err:
+                print("there was an error: ", err)
+        
+        dicts_counter += 1
+
+
+
+        
+
+        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values)]), set_of_values
 
     def log_to_tree(self, raw_data:str):
 
@@ -490,7 +529,7 @@ class MainApplication(tk.Frame):
                         # continue
 
                     for sub_data in new_data:
-                        print("this is subdata: ", sub_data)
+                        # print("this is subdata: ", sub_data)
                         if len(sub_data) > 1:
                             name = sub_data[1:sub_data.index("|")]
                             # print('this is spmething: ', name)
