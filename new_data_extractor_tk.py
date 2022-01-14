@@ -159,159 +159,166 @@ class MainApplication(tk.Frame):
 
     def log_to_excel_process(self):
 
-        if self.preview_table != None:
-            self.preview_table.destroy()
-            self.table_tittle.destroy()
-
-        self.convert_btn["state"] = "disabled"
-        self.browse_btn["state"] = "disabled"
-        self.export_btn["state"] = "disabled"
-        
-
-        set_of_trees = [[], [], [], []]
-
-
-        
-
-        print("init")
-        counter = 0
         try:
-            all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
-        except Exception as err:
 
-            tk.messagebox.showerror("invalid path", err)
-   
+            if self.preview_table != None:
+                self.preview_table.destroy()
+                self.table_tittle.destroy()
 
-        self.pb1.config(mode="determinate")
-        self.status_label.config(text="processing log files...")
-        self.opn_excel_loc.forget()
-
-        print("starting point: ", len(all_files))
-        tm.sleep(1)
-
-
-
-        for fname in glob.iglob(logs_path + '**/**', recursive=True):
-
-            new = (counter * 100) / len(all_files)
-            counter += 1
-            root.update_idletasks()
-            self.pb1['value'] = new
-            # print(new)
+            self.convert_btn["state"] = "disabled"
+            self.browse_btn["state"] = "disabled"
+            self.export_btn["state"] = "disabled"
             
 
-
-            if os.path.isfile(fname):
-                num_lines = sum(1 for _ in open(fname))
-                with open(fname) as log_f:
-
-                    # start_of_log_f = log_f.name[:2]
-
-                    # if start_of_log_f == r'[1-9]-':
-                    #     raw_data = log_f.read()
-                        
-                    #     if num_lines > 26:
-                    #         tree = log_to_tree(raw_data)
-                    #         if tree != None:
-                    #             set_of_trees[int(start_of_log_f[:1])]
-                    #             trees1.append(tree)
+            set_of_trees = [[], [], [], []]
 
 
-                    
-                    if '1-' in log_f.name:
-                        
-                        raw_data = log_f.read()
-                        
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[0].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[0].append(tree)
+            
 
-                    elif '2-' in log_f.name:
-                        raw_data = log_f.read()
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            if tree != None:
-                                set_of_trees[1].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[1].append(tree)
+            print("init")
+            counter = 0
+            try:
+                all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
+            except Exception as err:
 
-                    elif '3-' in log_f.name:
-                        raw_data = log_f.read()
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            if tree != None:
-                                set_of_trees[2].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[2].append(tree)
-
-                    elif '4-' in log_f.name:
-                        raw_data = log_f.read()
-                        
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            if tree != None:
-                                set_of_trees[3].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[3].append(tree)
-                    else:
-                        raw_data = log_f.read()
-                        
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            if tree != None:
-                                set_of_trees[3].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[3].append(tree)
-
+                tk.messagebox.showerror("invalid path", err)
     
+
+            self.pb1.config(mode="determinate")
+            self.status_label.config(text="processing log files...")
+            self.opn_excel_loc.forget()
+
+            print("starting point: ", len(all_files))
+            tm.sleep(1)
+
+
+
+            for fname in glob.iglob(logs_path + '**/**', recursive=True):
+
+                new = (counter * 100) / len(all_files)
+                counter += 1
+                root.update_idletasks()
+                self.pb1['value'] = new
+                # print(new)
+                
+
+
+                if os.path.isfile(fname):
+                    num_lines = sum(1 for _ in open(fname))
+                    with open(fname) as log_f:
+
+                        # start_of_log_f = log_f.name[:2]
+
+                        # if start_of_log_f == r'[1-9]-':
+                        #     raw_data = log_f.read()
+                            
+                        #     if num_lines > 26:
+                        #         tree = log_to_tree(raw_data)
+                        #         if tree != None:
+                        #             set_of_trees[int(start_of_log_f[:1])]
+                        #             trees1.append(tree)
+
+
+                        
+                        if '1-' in log_f.name:
+                            
+                            raw_data = log_f.read()
+                            
+                            if num_lines > 26:
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[0].append(tree)
+                            elif self.can_show_fails.get():
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[0].append(tree)
+
+                        elif '2-' in log_f.name:
+                            raw_data = log_f.read()
+                            if num_lines > 26:
+                                tree = self.log_to_tree(raw_data)
+                                if tree != None:
+                                    set_of_trees[1].append(tree)
+                            elif self.can_show_fails.get():
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[1].append(tree)
+
+                        elif '3-' in log_f.name:
+                            raw_data = log_f.read()
+                            if num_lines > 26:
+                                tree = self.log_to_tree(raw_data)
+                                if tree != None:
+                                    set_of_trees[2].append(tree)
+                            elif self.can_show_fails.get():
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[2].append(tree)
+
+                        elif '4-' in log_f.name:
+                            raw_data = log_f.read()
+                            
+                            if num_lines > 26:
+                                tree = self.log_to_tree(raw_data)
+                                if tree != None:
+                                    set_of_trees[3].append(tree)
+                            elif self.can_show_fails.get():
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[3].append(tree)
+                        else:
+                            raw_data = log_f.read()
+                            
+                            if num_lines > 26:
+                                tree = self.log_to_tree(raw_data)
+                                if tree != None:
+                                    set_of_trees[3].append(tree)
+                            elif self.can_show_fails.get():
+                                tree = self.log_to_tree(raw_data)
+                                # print(RenderTree(tree))
+                                if tree != None:
+                                    set_of_trees[3].append(tree)
+
         
-        print("starting last pb")
-        self.pb1.config(mode="indeterminate")
-        self.pb1.start(10)
-        # print("this are the set of trees: ", set_of_trees)
+            
+            print("starting last pb")
+            self.pb1.config(mode="indeterminate")
+            self.pb1.start(10)
+            # print("this are the set of trees: ", set_of_trees)
 
 
-        data_dict = self.data_conversion(set_of_trees)
+            data_dict = self.data_conversion(set_of_trees)
 
 
-        self.export_btn["state"] = "normal"
-        self.convert_btn["state"] = "normal"
-        self.browse_btn["state"] = "normal"
-        self.status_label.config(text="Export is enabled!")
-        self.pb1.config(mode="determinate")
-        self.pb1['value'] = 100
-        self.export_btn.config(command=lambda : self.export_caller(data_dict))
+            self.export_btn["state"] = "normal"
+            self.convert_btn["state"] = "normal"
+            self.browse_btn["state"] = "normal"
+            self.status_label.config(text="Export is enabled!")
+            self.pb1.config(mode="determinate")
+            self.pb1['value'] = 100
+            self.export_btn.config(command=lambda : self.export_caller(data_dict))
+        except Exception as err:
+            tk.messagebox.showerror("data extraction error", err)
+
     
     def data_conversion(self, set_of_trees):
 
         # print("this are the set of trees: ", set_of_trees)
         data_dict = {}
         #tn is refering to test_name, and sv is refering to 'set of values'
+        try:
+            for trees in set_of_trees:
+                temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
+                data_dict[tuple(temp_tn)] = temp_sv
 
-        for trees in set_of_trees:
-            temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
-            data_dict[tuple(temp_tn)] = temp_sv
-
-        self.pb1.stop()
+            self.pb1.stop()
+        except Exception as err:
+            tk.messagebox.showerror("data conversion error", err)
         return data_dict
 
         
@@ -321,47 +328,51 @@ class MainApplication(tk.Frame):
 
     
     def export_to_excel(self, data_dict):
-        self.status_label.config(text=" ", bg='gray94')
-        self.convert_btn["state"] = "disabled"
-        self.browse_btn["state"] = "disabled"
-        self.export_btn["state"] = "disabled"
-        self.opn_excel_loc.forget()
-        counter = 0
-        dfs = []
 
-        files = [('Excel Files', '*.xlsx'), 
-             ('All Files', '*.*')]
+        try:
+            self.status_label.config(text=" ", bg='gray94')
+            self.convert_btn["state"] = "disabled"
+            self.browse_btn["state"] = "disabled"
+            self.export_btn["state"] = "disabled"
+            self.opn_excel_loc.forget()
+            counter = 0
+            dfs = []
 
-        file = asksaveasfile(filetypes = files, defaultextension = files)
-        for key, value in data_dict.items():
-            self.status_label.config(text="sorting the data...")
-            df = convert_to_dataframe(value, key)
-            dfs.append(df)
-        
-        new_dfs = []
-        for idx, df in enumerate(dfs):
-            if not df.empty:
-                new_dfs.append(df)
+            files = [('Excel Files', '*.xlsx'), 
+                ('All Files', '*.*')]
 
-        self.pb1.config(mode="indeterminate")
-        self.pb1.start(10)
-        with pd.ExcelWriter(file.name) as writer: 
-            for idx, df in enumerate(new_dfs):
-                status_text = "creating sheet " + "(" + str(idx+1) + "/" + str(len(new_dfs)) + ") ..."
-                self.status_label.config(text=status_text)
-                counter += 1
-                df.to_excel(writer, sheet_name='Nido '+ str(counter))  
-        
-        self.pb1.stop()
-        self.export_btn["state"] = "normal"
-        self.convert_btn["state"] = "normal"
-        self.browse_btn["state"] = "normal"
+            file = asksaveasfile(filetypes = files, defaultextension = files)
+            for key, value in data_dict.items():
+                self.status_label.config(text="sorting the data...")
+                df = convert_to_dataframe(value, key)
+                dfs.append(df)
+            
+            new_dfs = []
+            for idx, df in enumerate(dfs):
+                if not df.empty:
+                    new_dfs.append(df)
 
-        
-        self.status_label.config(text="Done!", bg='green')
-        self.opn_excel_loc.config(command=lambda:explore(file.name))
-        self.opn_excel_loc.pack(side=tk.LEFT)
-        self.pb1.config(mode="determinate")
+            self.pb1.config(mode="indeterminate")
+            self.pb1.start(10)
+            with pd.ExcelWriter(file.name) as writer: 
+                for idx, df in enumerate(new_dfs):
+                    status_text = "creating sheet " + "(" + str(idx+1) + "/" + str(len(new_dfs)) + ") ..."
+                    self.status_label.config(text=status_text)
+                    counter += 1
+                    df.to_excel(writer, sheet_name='Nido '+ str(counter))  
+            
+            self.pb1.stop()
+            self.export_btn["state"] = "normal"
+            self.convert_btn["state"] = "normal"
+            self.browse_btn["state"] = "normal"
+
+            
+            self.status_label.config(text="Done!", bg='green')
+            self.opn_excel_loc.config(command=lambda:explore(file.name))
+            self.opn_excel_loc.pack(side=tk.LEFT)
+            self.pb1.config(mode="determinate")
+        except Exception as err:
+            tk.messagebox.showerror("export error", err)
 
     def dicts_to_excel_data(self, dicts):
         global dicts_counter
@@ -746,6 +757,7 @@ def convert_to_dataframe(data, cols):
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
     df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5])])
+    df.index = np.arange(1, len(df)+1)
     print("this is df: \n", df)
     return df
 
