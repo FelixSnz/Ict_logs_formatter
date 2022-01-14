@@ -1,4 +1,5 @@
 
+from turtle import width
 from anytree.node.node import Node
 from anytree import RenderTree
 import tkinter as tk
@@ -37,6 +38,8 @@ class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
 
+        self.preview_table = None
+
         root.geometry('500x160')
         root.title('Logs to excel converter')
         root.configure(background='gray94')
@@ -71,8 +74,7 @@ class MainApplication(tk.Frame):
 
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
 
-        self.preview_table = tk.ttk.Treeview(self.middle_frame)
-        self.preview_table.pack(fill=tk.BOTH, expand=True)
+        
 
         
 
@@ -102,6 +104,9 @@ class MainApplication(tk.Frame):
         
 
     def browse_for_path(self):
+        if self.preview_table != None:
+            self.preview_table.destroy()
+        # self.preview_table.delete(*self.preview_table.get_children())
         global dicts_counter
         dicts_counter = 0
         self.status_label.config(text="waiting for the path...", bg='gray94')
@@ -354,21 +359,28 @@ class MainApplication(tk.Frame):
 
         
 
-        self.preview_table['columns']= test_names
-        self.preview_table.column("#0", width=0,  stretch=tk.NO)
-        self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+        
 
         
         if dicts_counter < 1:
             try:
+
+                self.preview_table = tk.ttk.Treeview(self.middle_frame)
+                self.preview_table.pack(fill=tk.BOTH, expand=True)
+                self.preview_table['columns']= test_names
+                self.preview_table.column("#0", width=-1300)
+                self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+
+
+                
                 for test_name in test_names[:10]:
-                    self.preview_table.column(test_name ,anchor=tk.CENTER, stretch=0)
-                    self.preview_table.heading(test_name,text=test_name,anchor=tk.CENTER)
-                    tm.sleep(0.5)
-                tm.sleep(0.5)
+                    self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
+                    self.preview_table.heading(test_name,text=test_name)
+                self.preview_table['show'] = 'headings'
+
                 for idx, vals in enumerate(np.array(set_of_values)[:,:10]):
                     self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
-                    tm.sleep(0.5)    
+  
                 
             except Exception as err:
                 print("there was an error: ", err)
