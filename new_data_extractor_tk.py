@@ -69,6 +69,8 @@ class MainApplication(tk.Frame):
         self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath, bg='white')
         self.pathEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        self.textEntryPath.trace("w", lambda name, index,mode, var=self.textEntryPath: self.callback(var))
+
         self.browse_btn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
         self.browse_btn.pack(side=tk.LEFT,  anchor=tk.NW)
 
@@ -82,6 +84,8 @@ class MainApplication(tk.Frame):
         
         self.convert_btn = tk.Button(self.top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
         self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
+
+        self.convert_btn["state"] = "disabled"
 
         cnvrt_btn_hover_msg = tix.Balloon(root)
         cnvrt_btn_hover_msg.bind_widget(self.convert_btn, 
@@ -123,6 +127,14 @@ class MainApplication(tk.Frame):
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
         
+    def callback(self, var):
+        if var.get() != "":
+
+            self.convert_btn["state"] = "normal"
+        else:
+            self.convert_btn["state"] = "disabled"
+
+
 
     def browse_for_path(self):
         if self.preview_table != None:
@@ -135,10 +147,16 @@ class MainApplication(tk.Frame):
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
-            global logs_path
-            logs_path = tempdir
-            self.textEntryPath.set(tempdir)
-            global pathEntry
+            if not os.path.exists(tempdir):
+                tk.messagebox.showerror("invalid path", "you moust insert a existing path")
+            else:
+                global logs_path
+                logs_path = tempdir
+                self.textEntryPath.set(tempdir)
+                global pathEntry
+
+            
+ 
 
             
             

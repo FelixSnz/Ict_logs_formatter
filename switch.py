@@ -1,20 +1,16 @@
-#Import the tkinter library
+#Import the Tkinter library
 from tkinter import *
-from tkinter.tix import *
 
-#Create an instance of tkinter frame
-win = Tk()
-#Set the geometry
-win.geometry("400x200")
+win= Tk()
 
-#Create a tooltip
-tip= Balloon(win)
+win.geometry("750x250")
+def callback(var):
+   content= var.get()
+   Label(win, text=content).pack()
 
-#Create a Button widget
-my_button=Button(win, text= "Python", font=('Helvetica bold', 20))
-my_button.pack(pady=20)
+var = StringVar()
+var.trace("s", lambda name, index,mode, var=var: callback(var))
 
-#Bind the tooltip with button
-tip.bind_widget(my_button,balloonmsg="Python is an interpreted, high-level and general-purpose programming language")
-
+e = Entry(win, textvariable=var)
+e.pack()
 win.mainloop()
