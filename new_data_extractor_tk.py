@@ -147,13 +147,10 @@ class MainApplication(tk.Frame):
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
-            if not os.path.exists(tempdir):
-                tk.messagebox.showerror("invalid path", "you moust insert a existing path")
-            else:
-                global logs_path
-                logs_path = tempdir
-                self.textEntryPath.set(tempdir)
-                global pathEntry
+            global logs_path
+            logs_path = tempdir
+            self.textEntryPath.set(tempdir)
+            global pathEntry
 
             
  
@@ -172,8 +169,12 @@ class MainApplication(tk.Frame):
 
         print("init")
         counter = 0
-        all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
-        
+        try:
+            all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
+        except Exception as err:
+
+            tk.messagebox.showerror("invalid path", err)
+   
 
         self.pb1.config(mode="determinate")
         self.status_label.config(text="processing log files...")
@@ -181,6 +182,9 @@ class MainApplication(tk.Frame):
 
         print("starting point: ", len(all_files))
         tm.sleep(1)
+
+
+
         for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
             new = (counter * 100) / len(all_files)
