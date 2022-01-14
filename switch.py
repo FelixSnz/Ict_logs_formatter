@@ -1,26 +1,20 @@
+#Import the tkinter library
 from tkinter import *
-from  tkinter import ttk
+from tkinter.tix import *
 
+#Create an instance of tkinter frame
+win = Tk()
+#Set the geometry
+win.geometry("400x200")
 
-ws  = Tk()
-ws.title('PythonGuides')
-ws.geometry('300x400')
+#Create a tooltip
+tip= Balloon(win)
 
-preview_table = ttk.Treeview(ws)
-preview_table.pack()
+#Create a Button widget
+my_button=Button(win, text= "Python", font=('Helvetica bold', 20))
+my_button.pack(pady=20)
 
-preview_table['columns']= test_names
-preview_table.column("#0", width=0,  stretch=NO)
-preview_table.heading("#0",text="",anchor=CENTER)
+#Bind the tooltip with button
+tip.bind_widget(my_button,balloonmsg="Python is an interpreted, high-level and general-purpose programming language")
 
-for test_name in test_names:
-    preview_table.column(test_name ,anchor=CENTER, width=80)
-    preview_table.heading(test_name,text=test_name,anchor=CENTER)
-
-
-for idx, vals in enumerate(set_of_values):
-    preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)
-
-
-
-ws.mainloop()
+win.mainloop()

@@ -1,8 +1,11 @@
 
-from turtle import width
+from cgitb import text
+from turtle import bgcolor, width
 from anytree.node.node import Node
 from anytree import RenderTree
 import tkinter as tk
+from tkinter import tix
+
 import time as tm
 
 from statistics import stdev
@@ -66,8 +69,26 @@ class MainApplication(tk.Frame):
         self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath, bg='white')
         self.pathEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        self.browseBtn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
-        self.browseBtn.pack(side=tk.LEFT,  anchor=tk.NW)
+        self.browse_btn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
+        self.browse_btn.pack(side=tk.LEFT,  anchor=tk.NW)
+
+        brws_btn_hover_msg = tix.Balloon(root)
+        brws_btn_hover_msg.bind_widget(self.browse_btn, 
+        balloonmsg="click to browse the directory of the logs")
+
+        for sub in brws_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
+        
+        
+        self.convert_btn = tk.Button(self.top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
+        self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
+
+        cnvrt_btn_hover_msg = tix.Balloon(root)
+        cnvrt_btn_hover_msg.bind_widget(self.convert_btn, 
+        balloonmsg="click to start the conversion process")
+
+        for sub in cnvrt_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
 
         self.top_frame.pack(fill=tk.BOTH)
 
@@ -92,7 +113,7 @@ class MainApplication(tk.Frame):
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
-        self.status_label.config(text="waiting for the path...", bg='gray94')
+        self.status_label.config(text=" ", bg='gray94')
 
         
 
@@ -106,10 +127,11 @@ class MainApplication(tk.Frame):
     def browse_for_path(self):
         if self.preview_table != None:
             self.preview_table.destroy()
+            self.table_tittle.destroy()
         # self.preview_table.delete(*self.preview_table.get_children())
         global dicts_counter
         dicts_counter = 0
-        self.status_label.config(text="waiting for the path...", bg='gray94')
+        self.status_label.config(text=" ", bg='gray94')
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
@@ -118,7 +140,7 @@ class MainApplication(tk.Frame):
             self.textEntryPath.set(tempdir)
             global pathEntry
 
-            thread_pool_executor.submit(self.log_to_excel_process)
+            
             
 
 
@@ -364,7 +386,8 @@ class MainApplication(tk.Frame):
         
         if dicts_counter < 1:
             try:
-
+                self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
+                self.table_tittle.pack(anchor=tk.CENTER)
                 self.preview_table = tk.ttk.Treeview(self.middle_frame)
                 self.preview_table.pack(fill=tk.BOTH, expand=True)
                 self.preview_table['columns']= test_names
@@ -700,7 +723,7 @@ def explore(path):
         subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = tix.Tk()
     
     main = MainApplication(root)
     root.mainloop()
