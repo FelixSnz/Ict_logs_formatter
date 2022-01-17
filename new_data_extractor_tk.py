@@ -5,6 +5,7 @@ from anytree.node.node import Node
 from anytree import RenderTree
 import tkinter as tk
 from tkinter import tix
+import sys, os
 
 import time as tm
 
@@ -15,6 +16,7 @@ import glob
 import os
 import re
 import numpy as np
+import re
 
 from tkinter import filedialog
 
@@ -33,6 +35,8 @@ import localfuncs as lf
 
 dicts_counter = 0
 
+amount_of_nests = 0
+
 
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 
@@ -43,8 +47,9 @@ class MainApplication(tk.Frame):
 
         self.preview_table = None
 
-        root.geometry('500x160')
+        root.geometry('640x220')
         root.title('Logs to excel converter')
+        root.iconbitmap("kimball.ico")
         root.configure(background='gray94')
 
         
@@ -53,11 +58,32 @@ class MainApplication(tk.Frame):
         self.export_btn.pack(side=tk.RIGHT)
         self.export_btn["state"] = "disabled"
 
+        exprt_btn_hover_msg = tix.Balloon(root)
+        exprt_btn_hover_msg.bind_widget(self.export_btn, 
+        balloonmsg="click to start the conversion export process to excel format")
+
+        for sub in exprt_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
+
         self.opn_excel_loc = tk.Button(self.upper_top_frame, text='Open excel location')
+
+        opnexc_btn_hover_msg = tix.Balloon(root)
+        opnexc_btn_hover_msg.bind_widget(self.opn_excel_loc, 
+        balloonmsg="click to open the file explorer in the path of your recent exported excel file")
+
+        for sub in opnexc_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
 
         self.can_show_fails = tk.IntVar()
         self.check_btn_showerror = tk.Checkbutton(self.upper_top_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
         self.check_btn_showerror.pack(side=tk.RIGHT)
+
+        check_btn_hover_msg = tix.Balloon(root)
+        check_btn_hover_msg.bind_widget(self.check_btn_showerror, 
+        balloonmsg="check or not before the conversion process")
+
+        for sub in check_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
 
         self.upper_top_frame.pack(fill=tk.BOTH)
 
@@ -109,20 +135,25 @@ class MainApplication(tk.Frame):
         
 
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
 
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.pb1.pack(side=tk.BOTTOM, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.status_label = tk.Label(self.bottom_frame, text=' ', bg='gray94')
+        self.progress_bar_label = tk.Label(self.bottom_frame, text='0%', bg='gray94')
+        self.progress_bar_label.pack(side=tk.LEFT, anchor=tk.SW)
+
+        self.status_label = tk.Label(self.bottom_frame2, text=' ', bg='gray94')
         self.status_label.pack(side=tk.LEFT, anchor=tk.SW)
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
+        self.bottom_frame2.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.status_label.config(text=" ", bg='gray94')
 
         
 
         
-
+    
        
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -139,8 +170,7 @@ class MainApplication(tk.Frame):
     def browse_for_path(self):
         
         # self.preview_table.delete(*self.preview_table.get_children())
-        global dicts_counter
-        dicts_counter = 0
+        
         self.status_label.config(text=" ", bg='gray94')
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
@@ -152,8 +182,6 @@ class MainApplication(tk.Frame):
 
             
  
-
-            
             
 
 
@@ -165,12 +193,15 @@ class MainApplication(tk.Frame):
                 self.preview_table.destroy()
                 self.table_tittle.destroy()
 
+            global dicts_counter
+            dicts_counter = 0
+
             self.convert_btn["state"] = "disabled"
-            self.browse_btn["state"] = "disabled"
+            
             self.export_btn["state"] = "disabled"
             
 
-            set_of_trees = [[], [], [], []]
+            set_of_trees = {}
 
 
             
@@ -179,17 +210,18 @@ class MainApplication(tk.Frame):
             counter = 0
             try:
                 all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
+                self.browse_btn["state"] = "disabled"
             except Exception as err:
+                self.browse_btn["state"] = "normal"
 
                 tk.messagebox.showerror("invalid path", err)
     
 
             self.pb1.config(mode="determinate")
-            self.status_label.config(text="processing log files...")
+            self.status_label.config(text="formating log files...")
             self.opn_excel_loc.forget()
 
             print("starting point: ", len(all_files))
-            tm.sleep(1)
 
 
 
@@ -199,109 +231,94 @@ class MainApplication(tk.Frame):
                 counter += 1
                 root.update_idletasks()
                 self.pb1['value'] = new
-                # print(new)
-                
+                self.progress_bar_label.config(text=str(int(new))+'%')
+
 
 
                 if os.path.isfile(fname):
                     num_lines = sum(1 for _ in open(fname))
                     with open(fname) as log_f:
 
-                        # start_of_log_f = log_f.name[:2]
 
-                        # if start_of_log_f == r'[1-9]-':
-                        #     raw_data = log_f.read()
-                            
-                        #     if num_lines > 26:
-                        #         tree = log_to_tree(raw_data)
-                        #         if tree != None:
-                        #             set_of_trees[int(start_of_log_f[:1])]
-                        #             trees1.append(tree)
+                        file_name = log_f.name.split("\\")[-1]
 
+
+                        nest_number = file_name[:3]
+                        if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
+                            nest_number = file_name[:2]
+                            if re.search(r'[0-9](-|[0-9])', nest_number):
+                                
+                                if nest_number.endswith('-'):
+                                    nest_number = nest_number[:1]
+                        else:
+                            nest_number = '?'
 
                         
-                        if '1-' in log_f.name:
-                            
-                            raw_data = log_f.read()
-                            
-                            if num_lines > 26:
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[0].append(tree)
-                            elif self.can_show_fails.get():
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[0].append(tree)
+                        if not nest_number in set_of_trees:
+                            set_of_trees[nest_number] = []
+            
+            global amount_of_nests
+            amount_of_nests = len(set_of_trees)
 
-                        elif '2-' in log_f.name:
-                            raw_data = log_f.read()
-                            if num_lines > 26:
-                                tree = self.log_to_tree(raw_data)
-                                if tree != None:
-                                    set_of_trees[1].append(tree)
-                            elif self.can_show_fails.get():
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[1].append(tree)
 
-                        elif '3-' in log_f.name:
-                            raw_data = log_f.read()
-                            if num_lines > 26:
-                                tree = self.log_to_tree(raw_data)
-                                if tree != None:
-                                    set_of_trees[2].append(tree)
-                            elif self.can_show_fails.get():
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[2].append(tree)
+            for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
-                        elif '4-' in log_f.name:
-                            raw_data = log_f.read()
-                            
-                            if num_lines > 26:
-                                tree = self.log_to_tree(raw_data)
-                                if tree != None:
-                                    set_of_trees[3].append(tree)
-                            elif self.can_show_fails.get():
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[3].append(tree)
+                new = (counter * 100) / len(all_files)
+                counter += 1
+                root.update_idletasks()
+                self.pb1['value'] = new
+                self.progress_bar_label.config(text=str(int(new))+'%')
+
+
+
+                if os.path.isfile(fname):
+                    num_lines = sum(1 for _ in open(fname))
+                    with open(fname) as log_f:
+
+                        
+                        file_name = log_f.name.split("\\")[-1]
+
+
+                        nest_number = file_name[:3]
+                        if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
+                            nest_number = file_name[:2]
+                            if re.search(r'[0-9](-|[0-9])', nest_number):
+                                
+                                if nest_number.endswith('-'):
+                                    nest_number = nest_number[:1]
                         else:
-                            raw_data = log_f.read()
+                            nest_number = '?'
+
+
+                        raw_data = log_f.read()
                             
-                            if num_lines > 26:
-                                tree = self.log_to_tree(raw_data)
-                                if tree != None:
-                                    set_of_trees[3].append(tree)
-                            elif self.can_show_fails.get():
-                                tree = self.log_to_tree(raw_data)
-                                # print(RenderTree(tree))
-                                if tree != None:
-                                    set_of_trees[3].append(tree)
+                        if num_lines > 26:
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
+                            if tree != None:
+                                set_of_trees[nest_number].append(tree)
+                        elif self.can_show_fails.get():
+                            tree = self.log_to_tree(raw_data)
+                            # print(RenderTree(tree))
+                            if tree != None:
+                                set_of_trees[nest_number].append(tree)
 
         
             
             print("starting last pb")
-            self.pb1.config(mode="indeterminate")
-            self.pb1.start(10)
+
             # print("this are the set of trees: ", set_of_trees)
 
 
-            data_dict = self.data_conversion(set_of_trees)
+            data_dict, sheet_ids = self.data_conversion(set_of_trees)
 
 
             self.export_btn["state"] = "normal"
             self.convert_btn["state"] = "normal"
             self.browse_btn["state"] = "normal"
             self.status_label.config(text="Export is enabled!")
-            self.pb1.config(mode="determinate")
-            self.pb1['value'] = 100
-            self.export_btn.config(command=lambda : self.export_caller(data_dict))
+
+            self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
             tk.messagebox.showerror("data extraction error", err)
 
@@ -312,24 +329,25 @@ class MainApplication(tk.Frame):
         data_dict = {}
         #tn is refering to test_name, and sv is refering to 'set of values'
         try:
-            for trees in set_of_trees:
+            for trees in set_of_trees.values():
                 temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
                 data_dict[tuple(temp_tn)] = temp_sv
 
-            self.pb1.stop()
+
         except Exception as err:
             tk.messagebox.showerror("data conversion error", err)
-        return data_dict
+        return data_dict, set_of_trees.keys()
 
         
 
-    def export_caller(self, dicts_data):
-        thread_pool_executor.submit(self.export_to_excel, dicts_data)
+    def export_caller(self, dicts_data, ids):
+        thread_pool_executor.submit(self.export_to_excel, dicts_data, ids)
 
     
-    def export_to_excel(self, data_dict):
+    def export_to_excel(self, data_dict, ids):
 
         try:
+            global amount_of_nests
             self.status_label.config(text=" ", bg='gray94')
             self.convert_btn["state"] = "disabled"
             self.browse_btn["state"] = "disabled"
@@ -343,6 +361,8 @@ class MainApplication(tk.Frame):
 
             file = asksaveasfile(filetypes = files, defaultextension = files)
             for key, value in data_dict.items():
+                print("this is the key: ", key)
+                print("this is the value: ", value)
                 self.status_label.config(text="sorting the data...")
                 df = convert_to_dataframe(value, key)
                 dfs.append(df)
@@ -356,10 +376,12 @@ class MainApplication(tk.Frame):
             self.pb1.start(10)
             with pd.ExcelWriter(file.name) as writer: 
                 for idx, df in enumerate(new_dfs):
-                    status_text = "creating sheet " + "(" + str(idx+1) + "/" + str(len(new_dfs)) + ") ..."
+                    status_text = "creating sheets..."
+                    pb1_label_text = str(int(0))+'% | ('+ str(idx+1)+"/" + str(amount_of_nests)+")"
+                    self.progress_bar_label.config(text=pb1_label_text)
                     self.status_label.config(text=status_text)
                     counter += 1
-                    df.to_excel(writer, sheet_name='Nido '+ str(counter))  
+                    df.to_excel(writer, sheet_name='Nido '+ str(counter) ) #revisar porque da error de "at least one sheet must be visible cuando trato de usar el id"
             
             self.pb1.stop()
             self.export_btn["state"] = "normal"
@@ -372,18 +394,38 @@ class MainApplication(tk.Frame):
             self.opn_excel_loc.pack(side=tk.LEFT)
             self.pb1.config(mode="determinate")
         except Exception as err:
-            tk.messagebox.showerror("export error", err)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+
+            error = "error: {0} in line: {1}".format(err, exc_tb.tb_lineno)
+            tk.messagebox.showerror("export error", error)
 
     def dicts_to_excel_data(self, dicts):
+        self.status_label.config(text='separating by nests...')
         global dicts_counter
+        counter = 0
         
         # print("this are the dicts: ", dicts)
         
         test_names = []
 
+        total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
+        self.pb1.config(mode="determinate")
+        
         for dict in get_dicts_only(dicts):
             # print("this should be a dict: ", )
             for test_name in dict.keys():
+
+                new = (counter * 100) / total_iterations
+                counter += 1
+                root.update_idletasks()
+                new += 0.1
+                new = min([new, 100])
+                self.pb1['value'] = new
+                
+                self.progress_bar_label.config(text=str(int(new))+'% | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")")
+
+
                 # print(test_name)
                 if not test_name in test_names:
                     test_names.append(test_name)
@@ -394,6 +436,14 @@ class MainApplication(tk.Frame):
             sample_count += 1
             values = []
             for test_name in test_names:
+                new = (counter * 100) / total_iterations
+                counter += 1
+                root.update_idletasks()
+                new += 0.1
+                new = min([new, 100])
+                self.pb1['value'] = new
+
+                self.progress_bar_label.config(text=str(int(new))+'% | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")")
                 if not test_name in list(dict.keys()):
                     # print('NOT FOUND ------------------------')
                     values.append("NONE")
@@ -419,11 +469,7 @@ class MainApplication(tk.Frame):
 
         mean_values = lf.get_means(dicts)
         # print("mean len: ", len(mean_values))
-        # stdev_values = lf.get_stdevs(dicts)
-        # print("stdev len: ", len(stdev_values))
 
-        # cpk_values = lf.cpks(high_limits, mean_values, stdev_values, low_limits)
-        # print("cpk len: ", len(cpk_values))
 
         test_names.insert(0, "Test names")
 
@@ -782,23 +828,3 @@ if __name__ == "__main__":
 
 
 
-
-#old convert to datafame func
-
-# def convert_to_dataframe(data, cols):
-#     new_data = []
-
-
-#     for d in data:
-#         new_data.append(d)
-
-    
-#     for col in cols:
-#         pass
-#         # print(len(col))
-    
-#     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
-#     #agregando un [:-1]
-#     df = pd.DataFrame(new_data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5]), list(cols[6]), list(cols[7])])
-#     print("this is df: \n", df)
-#     return df

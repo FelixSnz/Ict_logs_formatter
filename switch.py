@@ -9,7 +9,7 @@ def callback(var):
    Label(win, text=content).pack()
 
 var = StringVar()
-var.trace("s", lambda name, index,mode, var=var: callback(var))
+var.trace("w", lambda name, index,mode, var=var: callback(var))
 
 e = Entry(win, textvariable=var)
 e.pack()
