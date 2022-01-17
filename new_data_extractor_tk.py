@@ -1,5 +1,6 @@
 
 from cgitb import text
+import string
 from turtle import bgcolor, width
 from anytree.node.node import Node
 from anytree import RenderTree
@@ -213,8 +214,8 @@ class MainApplication(tk.Frame):
                 self.browse_btn["state"] = "disabled"
             except Exception as err:
                 self.browse_btn["state"] = "normal"
+                self.show_error(err, "invalid path")
 
-                tk.messagebox.showerror("invalid path", err)
     
 
             self.pb1.config(mode="determinate")
@@ -227,11 +228,11 @@ class MainApplication(tk.Frame):
 
             for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
-                new = (counter * 100) / len(all_files)
-                counter += 1
-                root.update_idletasks()
-                self.pb1['value'] = new
-                self.progress_bar_label.config(text=str(int(new))+'%')
+                # new = (counter * 100) / len(all_files)
+                # counter += 1
+                # root.update_idletasks()
+                # self.pb1['value'] = new
+                # self.progress_bar_label.config(text=str(int(new))+'%')
 
 
 
@@ -245,15 +246,16 @@ class MainApplication(tk.Frame):
 
                         nest_number = file_name[:3]
                         if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
-                            nest_number = file_name[:2]
-                            if re.search(r'[0-9](-|[0-9])', nest_number):
+ 
+                            if re.search(r'[0-9][0-9](-)', nest_number):
                                 
-                                if nest_number.endswith('-'):
-                                    nest_number = nest_number[:1]
-                        else:
-                            nest_number = '?'
+                                nest_number = nest_number[:2]
+                            elif re.search(r'[0-9](-)', nest_number[:2]):
+                                nest_number = nest_number[:1]
+                            else:
+                                nest_number = 'X'
 
-                        
+                        print("this is the nest number: ", nest_number)
                         if not nest_number in set_of_trees:
                             set_of_trees[nest_number] = []
             
@@ -281,27 +283,26 @@ class MainApplication(tk.Frame):
 
                         nest_number = file_name[:3]
                         if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
-                            nest_number = file_name[:2]
-                            if re.search(r'[0-9](-|[0-9])', nest_number):
+ 
+                            if re.search(r'[0-9][0-9](-)', nest_number):
                                 
-                                if nest_number.endswith('-'):
-                                    nest_number = nest_number[:1]
-                        else:
-                            nest_number = '?'
+                                nest_number = nest_number[:2]
+                            elif re.search(r'[0-9](-)', nest_number[:2]):
+                                nest_number = nest_number[:1]
+                            else:
+                                nest_number = 'X'
 
 
                         raw_data = log_f.read()
                             
-                        if num_lines > 26:
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[nest_number].append(tree)
-                        elif self.can_show_fails.get():
-                            tree = self.log_to_tree(raw_data)
-                            # print(RenderTree(tree))
-                            if tree != None:
-                                set_of_trees[nest_number].append(tree)
+
+                        tree = self.log_to_tree(raw_data)
+                        # print(RenderTree(tree))
+                        if tree != None:
+                            set_of_trees[nest_number].append(tree)
+            
+
+            print("set of trees: ", set_of_trees)
 
         
             
@@ -320,7 +321,8 @@ class MainApplication(tk.Frame):
 
             self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
-            tk.messagebox.showerror("data extraction error", err)
+            self.show_error(err, "data extraction error")
+        
 
     
     def data_conversion(self, set_of_trees):
@@ -335,8 +337,8 @@ class MainApplication(tk.Frame):
 
 
         except Exception as err:
-            tk.messagebox.showerror("data conversion error", err)
-        return data_dict, set_of_trees.keys()
+            self.show_error(err, "data conversion error")
+        return data_dict, list(set_of_trees.keys())
 
         
 
@@ -345,8 +347,10 @@ class MainApplication(tk.Frame):
 
     
     def export_to_excel(self, data_dict, ids):
+        
 
         try:
+            print("ids: ", ids)
             global amount_of_nests
             self.status_label.config(text=" ", bg='gray94')
             self.convert_btn["state"] = "disabled"
@@ -361,8 +365,8 @@ class MainApplication(tk.Frame):
 
             file = asksaveasfile(filetypes = files, defaultextension = files)
             for key, value in data_dict.items():
-                print("this is the key: ", key)
-                print("this is the value: ", value)
+                # print("this is the key: ", key)
+                # print("this is the value: ", value)
                 self.status_label.config(text="sorting the data...")
                 df = convert_to_dataframe(value, key)
                 dfs.append(df)
@@ -381,7 +385,13 @@ class MainApplication(tk.Frame):
                     self.progress_bar_label.config(text=pb1_label_text)
                     self.status_label.config(text=status_text)
                     counter += 1
-                    df.to_excel(writer, sheet_name='Nido '+ str(counter) ) #revisar porque da error de "at least one sheet must be visible cuando trato de usar el id"
+                    
+                    nest_id = ids[idx]
+                    if not nest_id is string:
+                        nest_id = str(nest_id)
+
+                    print("this is the id:", nest_id)
+                    df.to_excel(writer, sheet_name='Nido '+ nest_id )
             
             self.pb1.stop()
             self.export_btn["state"] = "normal"
@@ -394,11 +404,17 @@ class MainApplication(tk.Frame):
             self.opn_excel_loc.pack(side=tk.LEFT)
             self.pb1.config(mode="determinate")
         except Exception as err:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            self.show_error(err, "export error")
+            
+    
+    def show_error(self, e, tittle_error):
+        exc_type, exc_obj, exc_tb = sys.exc_info()
 
-            error = "error: {0} in line: {1}".format(err, exc_tb.tb_lineno)
-            tk.messagebox.showerror("export error", error)
+        error = "     error: {0} \n \
+    error type: {1} \n \
+    in line: {2}".format(e, exc_type, exc_tb.tb_lineno)
+        tk.messagebox.showerror(tittle_error, error)
+
 
     def dicts_to_excel_data(self, dicts):
         self.status_label.config(text='separating by nests...')
@@ -500,7 +516,8 @@ class MainApplication(tk.Frame):
   
                 
             except Exception as err:
-                print("there was an error: ", err)
+                self.show_error(err, "there was an error")
+
         
         dicts_counter += 1
 
@@ -517,8 +534,9 @@ class MainApplication(tk.Frame):
             raw_data = raw_data[raw_data.find("{@BATCH"):]
 
 
-
+        
         root = Node('root')
+        print("se inicio")
 
         extract_data = ""
 
@@ -563,9 +581,9 @@ class MainApplication(tk.Frame):
             else:
                 extract_data += char
         
-        if blck_counter == 0:
-            # print("block counter: ", blck_counter)
-            return None
+        # if blck_counter == 0:
+        #     # print("block counter: ", blck_counter)
+        #     return None
             
         new_data_ = extract_data.split("\n\n")
 
@@ -600,7 +618,7 @@ class MainApplication(tk.Frame):
 
         # print("this is new data: ", new_data)
 
-
+        print("vamoooo")
 
         for idx, data in enumerate(new_data):
 
@@ -726,7 +744,7 @@ class MainApplication(tk.Frame):
 
 
         # print("this is the root", RenderTree(root))
-
+        print("se logro", raw_data)
         return root
 
         
@@ -804,7 +822,7 @@ def convert_to_dataframe(data, cols):
     #agregando un [:-1]
     df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5])])
     df.index = np.arange(1, len(df)+1)
-    print("this is df: \n", df)
+    # print("this is df: \n", df)
     return df
 
 
