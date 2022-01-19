@@ -46,13 +46,14 @@ class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
 
+        self.root = root
+
         self.preview_table = None
 
         root.geometry('640x220')
         root.title('Logs to excel converter')
         root.iconbitmap("kimball.ico")
         root.configure(background='gray94')
-
         
         self.upper_top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.export_btn = tk.Button(self.upper_top_frame, text='Export to excel')
@@ -108,7 +109,6 @@ class MainApplication(tk.Frame):
         for sub in brws_btn_hover_msg.subwidgets_all():
             sub.config(bg='grey')
         
-        
         self.convert_btn = tk.Button(self.top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
         self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
 
@@ -123,17 +123,7 @@ class MainApplication(tk.Frame):
 
         self.top_frame.pack(fill=tk.BOTH)
 
-
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
-
-        
-
-        
-
-        
-
-
-        
 
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
@@ -150,12 +140,7 @@ class MainApplication(tk.Frame):
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.bottom_frame2.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.status_label.config(text=" ", bg='gray94')
-
         
-
-        
-    
-       
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
         
@@ -179,9 +164,7 @@ class MainApplication(tk.Frame):
             global logs_path
             logs_path = tempdir
             self.textEntryPath.set(tempdir)
-            global pathEntry
-
-            
+    
  
             
 
@@ -197,21 +180,16 @@ class MainApplication(tk.Frame):
             global dicts_counter
             dicts_counter = 0
 
-            self.convert_btn["state"] = "disabled"
-            
-            self.export_btn["state"] = "disabled"
-            
 
             set_of_trees = {}
 
 
-            
-
-            print("init")
             counter = 0
             try:
                 all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
-                self.browse_btn["state"] = "disabled"
+
+                self.set_buttons_state("disabled")
+
             except Exception as err:
                 self.browse_btn["state"] = "normal"
                 self.show_error(err, "invalid path")
@@ -221,8 +199,6 @@ class MainApplication(tk.Frame):
             self.pb1.config(mode="determinate")
             self.status_label.config(text="formating log files...")
             self.opn_excel_loc.forget()
-
-            print("starting point: ", len(all_files))
 
 
 
@@ -237,25 +213,15 @@ class MainApplication(tk.Frame):
 
 
                 if os.path.isfile(fname):
-                    num_lines = sum(1 for _ in open(fname))
+
                     with open(fname) as log_f:
 
 
                         file_name = log_f.name.split("\\")[-1]
 
 
-                        nest_number = file_name[:3]
-                        if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
- 
-                            if re.search(r'[0-9][0-9](-)', nest_number):
-                                
-                                nest_number = nest_number[:2]
-                            elif re.search(r'[0-9](-)', nest_number[:2]):
-                                nest_number = nest_number[:1]
-                            else:
-                                nest_number = 'X'
+                        nest_number = self.get_nest_number(file_name)
 
-                        print("this is the nest number: ", nest_number)
                         if not nest_number in set_of_trees:
                             set_of_trees[nest_number] = []
             
@@ -265,33 +231,20 @@ class MainApplication(tk.Frame):
 
             for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
-                new = (counter * 100) / len(all_files)
-                counter += 1
-                root.update_idletasks()
-                self.pb1['value'] = new
-                self.progress_bar_label.config(text=str(int(new))+'%')
 
+                counter += 1
+
+                self.update_progress_bar(counter, len(all_files))
 
 
                 if os.path.isfile(fname):
-                    num_lines = sum(1 for _ in open(fname))
+
                     with open(fname) as log_f:
 
                         
                         file_name = log_f.name.split("\\")[-1]
 
-
-                        nest_number = file_name[:3]
-                        if re.search(r'[0-9](-|[0-9])(|-)', nest_number):
- 
-                            if re.search(r'[0-9][0-9](-)', nest_number):
-                                
-                                nest_number = nest_number[:2]
-                            elif re.search(r'[0-9](-)', nest_number[:2]):
-                                nest_number = nest_number[:1]
-                            else:
-                                nest_number = 'X'
-
+                        nest_number = self.get_nest_number(file_name)
 
                         raw_data = log_f.read()
                             
@@ -300,23 +253,17 @@ class MainApplication(tk.Frame):
                         # print(RenderTree(tree))
                         if tree != None:
                             set_of_trees[nest_number].append(tree)
-            
-
-            print("set of trees: ", set_of_trees)
-
-        
-            
-            print("starting last pb")
-
-            # print("this are the set of trees: ", set_of_trees)
 
 
             data_dict, sheet_ids = self.data_conversion(set_of_trees)
 
 
-            self.export_btn["state"] = "normal"
-            self.convert_btn["state"] = "normal"
-            self.browse_btn["state"] = "normal"
+            self.set_buttons_state("normal")
+
+
+            root.update_idletasks()
+            self.pb1['value'] = 100
+            self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
             self.status_label.config(text="Export is enabled!")
 
             self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
@@ -324,12 +271,27 @@ class MainApplication(tk.Frame):
             self.show_error(err, "data extraction error")
         
 
-    
+    def get_nest_number(self, file_name):
+        if '-' in file_name:
+            nest_number = file_name.split('-')[:-1]
+
+            if len(nest_number) > 1:
+                new_nest_number = ''
+                for segment in nest_number:
+                    new_nest_number += segment
+                
+                return str(new_nest_number)
+            else:
+                return str(nest_number[0])
+                
+        else:
+            return 'NA'
+
     def data_conversion(self, set_of_trees):
 
         # print("this are the set of trees: ", set_of_trees)
         data_dict = {}
-        #tn is refering to test_name, and sv is refering to 'set of values'
+        #temp_tn is refering to a temporal test name, and temp_sv is refering to a temporal set of values
         try:
             for trees in set_of_trees.values():
                 temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
@@ -353,9 +315,7 @@ class MainApplication(tk.Frame):
             print("ids: ", ids)
             global amount_of_nests
             self.status_label.config(text=" ", bg='gray94')
-            self.convert_btn["state"] = "disabled"
-            self.browse_btn["state"] = "disabled"
-            self.export_btn["state"] = "disabled"
+            self.set_buttons_state("disabled")
             self.opn_excel_loc.forget()
             counter = 0
             dfs = []
@@ -394,9 +354,9 @@ class MainApplication(tk.Frame):
                     df.to_excel(writer, sheet_name='Nido '+ nest_id )
             
             self.pb1.stop()
-            self.export_btn["state"] = "normal"
-            self.convert_btn["state"] = "normal"
-            self.browse_btn["state"] = "normal"
+
+            self.set_buttons_state("normal")
+            
 
             
             self.status_label.config(text="Done!", bg='green')
@@ -405,6 +365,12 @@ class MainApplication(tk.Frame):
             self.pb1.config(mode="determinate")
         except Exception as err:
             self.show_error(err, "export error")
+    
+    def set_buttons_state(self, state:str):
+        self.export_btn["state"] = state
+        self.convert_btn["state"] = state
+        self.browse_btn["state"] = state
+
             
     
     def show_error(self, e, tittle_error):
@@ -418,6 +384,7 @@ class MainApplication(tk.Frame):
 
     def dicts_to_excel_data(self, dicts):
         self.status_label.config(text='separating by nests...')
+        global amount_of_nests
         global dicts_counter
         counter = 0
         
@@ -432,17 +399,12 @@ class MainApplication(tk.Frame):
             # print("this should be a dict: ", )
             for test_name in dict.keys():
 
-                new = (counter * 100) / total_iterations
+
                 counter += 1
-                root.update_idletasks()
-                new += 0.1
-                new = min([new, 100])
-                self.pb1['value'] = new
-                
-                self.progress_bar_label.config(text=str(int(new))+'% | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")")
+                left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
 
+                self.update_progress_bar(counter, total_iterations, left_pbs_str)
 
-                # print(test_name)
                 if not test_name in test_names:
                     test_names.append(test_name)
             
@@ -452,14 +414,14 @@ class MainApplication(tk.Frame):
             sample_count += 1
             values = []
             for test_name in test_names:
-                new = (counter * 100) / total_iterations
-                counter += 1
-                root.update_idletasks()
-                new += 0.1
-                new = min([new, 100])
-                self.pb1['value'] = new
 
-                self.progress_bar_label.config(text=str(int(new))+'% | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")")
+                counter +=1
+
+                left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+
+                self.update_progress_bar(counter, total_iterations, left_pbs_str)
+
+
                 if not test_name in list(dict.keys()):
                     # print('NOT FOUND ------------------------')
                     values.append("NONE")
@@ -493,8 +455,9 @@ class MainApplication(tk.Frame):
 
         
 
-        
-        if dicts_counter < 1:
+        dicts_counter += 1
+
+        if dicts_counter == amount_of_nests:
             try:
                 self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
                 self.table_tittle.pack(anchor=tk.CENTER)
@@ -519,13 +482,22 @@ class MainApplication(tk.Frame):
                 self.show_error(err, "there was an error")
 
         
-        dicts_counter += 1
-
-
-
-        
 
         return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values)]), set_of_values
+
+
+
+    def update_progress_bar(self, actual_iteracion, total_iterations, left_bars_text = ''):
+
+        new = (actual_iteracion * 100) / total_iterations
+
+        self.root.update_idletasks()
+        new += 0.1
+        new = min([new, 100])
+        self.pb1['value'] = new
+        
+        self.progress_bar_label.config(text=str(int(new)) + '%' + left_bars_text)
+
 
     def log_to_tree(self, raw_data:str):
 
@@ -744,7 +716,7 @@ class MainApplication(tk.Frame):
 
 
         # print("this is the root", RenderTree(root))
-        print("se logro", raw_data)
+        # print("se logro", raw_data)
         return root
 
         
