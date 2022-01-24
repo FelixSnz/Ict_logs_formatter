@@ -169,10 +169,16 @@ class MainApplication(tk.Frame):
                 raise RuntimeError
 
             self.pb1.config(mode="determinate")
-            self.status_label.config(text="formating log files...",  fg='black')
+            self.status_label.config(text="calculating amount of nests...",  fg='black')
+            
             self.opn_excel_loc.forget()
 
             for fname in glob.iglob(logs_path + '**/**', recursive=True):
+                counter += 1
+
+                self.update_progress_bar(counter, len(all_files))
+
+                
 
                 if os.path.isfile(fname):
 
@@ -190,7 +196,8 @@ class MainApplication(tk.Frame):
                             else:
                                 if num_lines > 30:
                                     set_of_trees[nest_number] = []
-    
+            counter = 0
+            self.status_label.config(text="formating log files...",  fg='black')
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
 
@@ -269,8 +276,6 @@ class MainApplication(tk.Frame):
             self.show_error(err, "data conversion error")
         return data_dict, list(set_of_trees.keys())
 
-        
-
     
 
     def dicts_to_excel_data(self, dicts):
@@ -284,7 +289,7 @@ class MainApplication(tk.Frame):
 
             test_names = []
 
-            total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
+            total_iterations = len(max(get_dicts_only(dicts), key=len).keys()) * len(get_dicts_only(dicts)) * 2
             self.pb1.config(mode="determinate")
             
             for dict in get_dicts_only(dicts):
@@ -298,6 +303,8 @@ class MainApplication(tk.Frame):
 
                     if not test_name in test_names:
                         test_names.append(test_name)
+            
+            # total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) + len(get_dicts_only(dicts)) *len(test_names)
                 
             set_of_values = []
             sample_count = 0
@@ -357,7 +364,9 @@ class MainApplication(tk.Frame):
             dicts_counter += 1
 
             if dicts_counter == amount_of_nests:
+                print("about to fill the preview table")
                 try:
+
                     self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
                     self.table_tittle.pack(anchor=tk.CENTER)
                     self.preview_table = tk.ttk.Treeview(self.middle_frame)
@@ -371,7 +380,7 @@ class MainApplication(tk.Frame):
                         self.preview_table.heading(test_name,text=test_name)
                     self.preview_table['show'] = 'headings'
 
-                    for idx, vals in enumerate(np.array(set_of_values)[:10]):
+                    for idx, vals in enumerate(np.array(set_of_values)[:10,:10]):
                         self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
     
                 except Exception as err:
@@ -540,9 +549,10 @@ class MainApplication(tk.Frame):
                                             if len(ind_data) >= 4:
 
                                                 
-                                                print("si tiene limites")
+                                                
 
                                                 if 'LIM' in ind_data[3]:
+                                                    # print("si tiene limites")
                                                     has_limits = True
 
                                                     comp_name = ind_data[0][3:] #anade el nombre del componente
@@ -565,7 +575,7 @@ class MainApplication(tk.Frame):
                                                     temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
                                             else:
                                                 has_limits = False
-                                                print("no tiene limites")
+                                                # print("no tiene limites")
                                                 if len(ind_data) == 3:
 
                                                     comp_name = ind_data[0][3:] #anade el nombre del componente
