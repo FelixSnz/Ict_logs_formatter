@@ -174,6 +174,7 @@ class MainApplication(tk.Frame):
     def log_to_excel_process(self):
 
         try:
+            self.status_label.config(text=" ", bg='gray94')
 
             if self.preview_table != None:
                 self.preview_table.destroy()
@@ -190,10 +191,10 @@ class MainApplication(tk.Frame):
 
             try:
                 
-                print("logs path: ", logs_path)
+                # print("logs path: ", logs_path)
                 all_files = [name for name in glob.iglob(logs_path + '**/**', recursive=True) if os.path.isfile(name)]
             
-                print("all files: ", len(all_files))
+                # print("all files: ", len(all_files))
                 if len(all_files) == 0:
                     raise NotADirectoryError
 
@@ -260,7 +261,7 @@ class MainApplication(tk.Frame):
 
                         raw_data = log_f.read()
 
-                        print(nest_number)
+                        # print(nest_number)
                             
 
                         tree = self.log_to_tree(raw_data)
@@ -281,8 +282,8 @@ class MainApplication(tk.Frame):
 
             data_dict, sheet_ids = self.data_conversion(set_of_trees)
 
-            print("data dict:",np.array(data_dict.values()))
-            print("data dict size: ", np.array(data_dict.values()).shape)
+            # print("data dict:",np.array(data_dict.values()))
+            # print("data dict size: ", np.array(data_dict.values()).shape)
 
 
             self.set_buttons_state("normal")
@@ -321,9 +322,13 @@ class MainApplication(tk.Frame):
         #temp_tn is refering to a temporal test name, and temp_sv is refering to a temporal set of values
         try:
             for trees in set_of_trees.values():
+                # print("epaaaaaaaaaaaaaaaaaaaaaaaaa")
                 temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
-                data_dict[tuple(temp_tn)] = temp_sv
-
+                if not temp_tn in data_dict:
+                    data_dict[tuple(temp_tn)] = temp_sv
+                else:
+                    data_dict[tuple([temp_tn, 2])] = temp_sv
+            # print("this is dd before: ", data_dict)
 
         except Exception as err:
             self.show_error(err, "data conversion error")
@@ -352,7 +357,11 @@ class MainApplication(tk.Frame):
 
             file = asksaveasfile(filetypes = files, defaultextension = files)
             for key, value in data_dict.items():
-                # print("this is the key: ", key)
+                # print("anobueeno")
+                print("this is the key: ", key)
+                if key[1] == 2:
+                    key = key[0]
+                    print("key: ", key)
                 # print("this is the value: ", value)
                 self.status_label.config(text="sorting the data...")
                 df = convert_to_dataframe(value, key)
@@ -360,6 +369,7 @@ class MainApplication(tk.Frame):
             
             new_dfs = []
             for idx, df in enumerate(dfs):
+                
                 if not df.empty:
                     new_dfs.append(df)
 
@@ -377,7 +387,7 @@ class MainApplication(tk.Frame):
                     if not nest_id is string:
                         nest_id = str(nest_id)
 
-                    print("this is the id:", nest_id)
+                    # print("this is the id:", nest_id)
                     df.to_excel(writer, sheet_name='Nido '+ nest_id )
             
             self.pb1.stop()
@@ -410,111 +420,122 @@ class MainApplication(tk.Frame):
 
 
     def dicts_to_excel_data(self, dicts):
-        self.status_label.config(text='separating by nests...')
-        global amount_of_nests
-        global dicts_counter
-        counter = 0
-        
+
         # print("this are the dicts: ", dicts)
-        
-        test_names = []
+        try:
 
-        total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
-        self.pb1.config(mode="determinate")
-        
-        for dict in get_dicts_only(dicts):
-            # print("this should be a dict: ", )
-            for test_name in dict.keys():
-
-
-                counter += 1
-                left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
-
-                self.update_progress_bar(counter, total_iterations, left_pbs_str)
-
-                if not test_name in test_names:
-                    test_names.append(test_name)
+            self.status_label.config(text='separating by nests...')
+            global amount_of_nests
+            global dicts_counter
+            counter = 0
             
-        set_of_values = []
-        sample_count = 0
-        for dict in get_dicts_only(dicts):
-            sample_count += 1
-            values = []
-            for test_name in test_names:
+            # print("this are the dicts: ", dicts)
+            
+            test_names = []
 
-                counter +=1
-
-                left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
-
-                self.update_progress_bar(counter, total_iterations, left_pbs_str)
+            total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
+            self.pb1.config(mode="determinate")
+            
+            for dict in get_dicts_only(dicts):
+                # print("this should be a dict: ", )
+                for test_name in dict.keys():
 
 
-                if not test_name in list(dict.keys()):
-                    # print('NOT FOUND ------------------------')
-                    values.append("NONE")
-                else:
-                    # print("si hay -----------------------------")
-                    values.append(dict[test_name][0])
+                    counter += 1
+                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
 
-            serial  = get_serials_only(dicts)[get_dicts_only(dicts).index(dict)]
-            # print("this is a serial: ", serial)
-            values.insert(0, serial)
-            set_of_values.append(values)
-        
-        low_limits = lf.get_limits(dicts)
-        # print("ll len: ", len(low_limits))
-        
-        high_limits = lf.get_limits(dicts, False)
-        # print("hl len: ", len(high_limits))
+                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
 
-        max_values = lf.get_maxs(dicts)
-        # print("max len: ", len(max_values))
-        min_values = lf.get_mins(dicts)
-        # print("min len: ", len(min_values))
-
-        mean_values = lf.get_means(dicts)
-        # print("mean len: ", len(mean_values))
-
-
-        test_names.insert(0, "Test names")
-
-        
-
-        
-
-        dicts_counter += 1
-
-        if dicts_counter == amount_of_nests:
-            try:
-                self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
-                self.table_tittle.pack(anchor=tk.CENTER)
-                self.preview_table = tk.ttk.Treeview(self.middle_frame)
-                self.preview_table.pack(fill=tk.BOTH, expand=True)
-                self.preview_table['columns']= test_names
-                self.preview_table.column("#0", width=-1300)
-                self.preview_table.heading("#0",text="",anchor=tk.CENTER)
-
-
+                    if not test_name in test_names:
+                        test_names.append(test_name)
                 
-                for test_name in test_names[:10]:
-                    self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
-                    self.preview_table.heading(test_name,text=test_name)
-                self.preview_table['show'] = 'headings'
+            set_of_values = []
+            sample_count = 0
+            for dict in get_dicts_only(dicts):
+                sample_count += 1
+                values = []
+                for test_name in test_names:
 
-                set_of_vals = np.array(set_of_values)
-                print("vals: ", set_of_vals)
+                    counter +=1
+
+                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+
+                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
 
 
-                for idx, vals in enumerate(np.array(set_of_values)[:10]):
-                    self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
-  
-                
-            except Exception as err:
-                self.show_error(err, "there was an error")
+                    if not test_name in list(dict.keys()):
+                        # print('NOT FOUND ------------------------')
+                        values.append("NONE")
+                    else:
+                        # print("si hay -----------------------------")
+                        values.append(dict[test_name][0])
 
-        
+                serial  = get_serials_only(dicts)[get_dicts_only(dicts).index(dict)]
+                # print("this is a serial: ", serial)
+                values.insert(0, serial)
+                set_of_values.append(values)
+            
+            low_limits = lf.get_limits(dicts)
+            # print("ll len: ", len(low_limits))
+            
+            high_limits = lf.get_limits(dicts, False)
+            # print("hl len: ", len(high_limits))
 
-        return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values)]), set_of_values
+            max_values = lf.get_maxs(dicts)
+            # print("max len: ", len(max_values))
+            min_values = lf.get_mins(dicts)
+            # print("min len: ", len(min_values))
+
+            mean_values = lf.get_means(dicts)
+            # print("mean len: ", len(mean_values))
+
+
+            test_names.insert(0, "Test names")
+
+
+            set_of_vals = np.array(set_of_values)
+            print("vals: ", test_names)
+
+            
+
+            
+
+            dicts_counter += 1
+
+            if dicts_counter == amount_of_nests:
+                try:
+                    self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
+                    self.table_tittle.pack(anchor=tk.CENTER)
+                    self.preview_table = tk.ttk.Treeview(self.middle_frame)
+                    self.preview_table.pack(fill=tk.BOTH, expand=True)
+                    self.preview_table['columns']= test_names
+                    self.preview_table.column("#0", width=-1300)
+                    self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+
+
+                    
+                    for test_name in test_names[:10]:
+                        self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
+                        self.preview_table.heading(test_name,text=test_name)
+                    self.preview_table['show'] = 'headings'
+
+                    set_of_vals = np.array(set_of_values)
+                    # print("vals: ", set_of_vals)
+
+
+                    for idx, vals in enumerate(np.array(set_of_values)[:10]):
+                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
+    
+                    
+                except Exception as err:
+                    self.show_error(err, "there was an error")
+
+            
+
+            return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values)]), set_of_values
+        except Exception as err:
+            self.show_error(err, "excel conversion error")
+
 
 
 
