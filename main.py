@@ -145,6 +145,8 @@ class MainApplication(tk.Frame):
 
         
     def callback(self, var):
+        global logs_path
+        logs_path = var.get()
         if var.get() != "":
 
             self.convert_btn["state"] = "normal"
@@ -185,14 +187,22 @@ class MainApplication(tk.Frame):
 
 
             counter = 0
-            try:
-                all_files = [name for name in os.listdir(logs_path) if os.path.isfile(os.path.join(logs_path, name))]
 
-                self.set_buttons_state("disabled")
+            try:
+                
+                print("logs path: ", logs_path)
+                all_files = [name for name in glob.iglob(logs_path + '**/**', recursive=True) if os.path.isfile(name)]
+            
+                print("all files: ", len(all_files))
+                if len(all_files) == 0:
+                    raise NotADirectoryError
+
+
 
             except Exception as err:
                 self.browse_btn["state"] = "normal"
                 self.show_error(err, "invalid path")
+                raise RuntimeError
 
     
 
@@ -228,6 +238,8 @@ class MainApplication(tk.Frame):
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
 
+            
+
 
             for fname in glob.iglob(logs_path + '**/**', recursive=True):
 
@@ -240,22 +252,37 @@ class MainApplication(tk.Frame):
                 if os.path.isfile(fname):
 
                     with open(fname) as log_f:
-
+                        
                         
                         file_name = log_f.name.split("\\")[-1]
 
                         nest_number = self.get_nest_number(file_name)
 
                         raw_data = log_f.read()
+
+                        print(nest_number)
                             
 
                         tree = self.log_to_tree(raw_data)
                         # print(RenderTree(tree))
-                        if tree != None:
-                            set_of_trees[nest_number].append(tree)
 
+                        num_lines = sum(1 for line in open(fname))
+                        if tree != None:
+                            if self.can_show_fails.get():
+                                set_of_trees[nest_number].append(tree)
+                            else:
+                                if num_lines > 30:
+                                    set_of_trees[nest_number].append(tree)
+
+                        else:
+                            print("?")
+
+            # print(set_of_trees)
 
             data_dict, sheet_ids = self.data_conversion(set_of_trees)
+
+            print("data dict:",np.array(data_dict.values()))
+            print("data dict size: ", np.array(data_dict.values()).shape)
 
 
             self.set_buttons_state("normal")
@@ -474,7 +501,11 @@ class MainApplication(tk.Frame):
                     self.preview_table.heading(test_name,text=test_name)
                 self.preview_table['show'] = 'headings'
 
-                for idx, vals in enumerate(np.array(set_of_values)[:,:10]):
+                set_of_vals = np.array(set_of_values)
+                print("vals: ", set_of_vals)
+
+
+                for idx, vals in enumerate(np.array(set_of_values)[:10]):
                     self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
   
                 
@@ -508,7 +539,6 @@ class MainApplication(tk.Frame):
 
         
         root = Node('root')
-        print("se inicio")
 
         extract_data = ""
 
@@ -590,7 +620,6 @@ class MainApplication(tk.Frame):
 
         # print("this is new data: ", new_data)
 
-        print("vamoooo")
 
         for idx, data in enumerate(new_data):
 
