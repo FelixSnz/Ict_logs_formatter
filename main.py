@@ -1,6 +1,7 @@
 
 from cgitb import text
 import string
+from textwrap import indent
 from turtle import bgcolor, width
 from anytree.node.node import Node
 from anytree import RenderTree
@@ -35,6 +36,7 @@ import localfuncs as lf
 dicts_counter = 0
 amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
+has_limits = True
 
 class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
@@ -82,7 +84,7 @@ class MainApplication(tk.Frame):
         self.textEntryPath = tk.StringVar()
         self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath, bg='white')
         self.pathEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.textEntryPath.trace("w", lambda name, index,mode, var=self.textEntryPath: self.callback(var))
+        self.textEntryPath.trace("w", lambda name, index,mode, var=self.textEntryPath: self.pathEntry_callback(var))
         self.browse_btn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
         self.browse_btn.pack(side=tk.LEFT,  anchor=tk.NW)
         brws_btn_hover_msg = tix.Balloon(root)
@@ -117,8 +119,10 @@ class MainApplication(tk.Frame):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
-        
-    def callback(self, var):
+    
+
+    #this function is called whenever thetext of textPathEntry widget changes
+    def pathEntry_callback(self, var):
         global logs_path
         logs_path = var.get()
         if var.get() != "":
@@ -127,7 +131,7 @@ class MainApplication(tk.Frame):
         else:
             self.convert_btn["state"] = "disabled"
 
-
+    #this function is called when browse_btn is pressed and sets expected path of the logs in the variable "logs_path"
     def browse_for_path(self):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         currdir = os.getcwd()
@@ -137,12 +141,10 @@ class MainApplication(tk.Frame):
             logs_path = tempdir
             self.textEntryPath.set(tempdir)
 
-
+    #main function for all the process that leaves ready the log data for exporting into an excel file
     def log_to_excel_process(self):
-
         try:
             self.status_label.config(text=" ", bg='gray94',  fg='black')
-
             if self.preview_table != None:
                 self.preview_table.destroy()
                 self.table_tittle.destroy()
@@ -188,9 +190,7 @@ class MainApplication(tk.Frame):
                             else:
                                 if num_lines > 30:
                                     set_of_trees[nest_number] = []
-
-                        
-            
+    
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
 
@@ -211,7 +211,6 @@ class MainApplication(tk.Frame):
                         raw_data = log_f.read()
 
                         tree = self.log_to_tree(raw_data)
-                        # print(RenderTree(tree))
 
                         num_lines = sum(1 for line in open(fname))
                         if tree != None:
@@ -223,10 +222,8 @@ class MainApplication(tk.Frame):
                         else:
                             print("?")
 
-            data_dict, sheet_ids = self.data_conversion(set_of_trees)
+            data_dict, sheet_ids = self.trees_to_excel_data(set_of_trees)
             self.set_buttons_state("normal")
-
-
             root.update_idletasks()
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
@@ -236,7 +233,7 @@ class MainApplication(tk.Frame):
         except Exception as err:
             self.show_error(err, "data extraction error")
         
-
+    #returns the nest number given a log file name
     def get_nest_number(self, file_name):
         if '-' in file_name:
             nest_number = file_name.split('-')[:-1]
@@ -253,14 +250,17 @@ class MainApplication(tk.Frame):
         else:
             return 'NA'
 
-    def data_conversion(self, set_of_trees):
+
+
+    #general function that covers the process of converting all the trees to excel data
+    def trees_to_excel_data(self, set_of_trees):
         data_dict = {}
         #temp_tn is refering to a temporal test name, and temp_sv is refering to a temporal set of values
         try:
             for trees in set_of_trees.values():
 
-                temp_tn, temp_sv = self.dicts_to_excel_data(trees_to_dicts(trees))
-                if not temp_tn in data_dict:
+                temp_tn, temp_sv = self.dicts_to_excel_data(self.trees_to_dicts(trees))
+                if not tuple(temp_tn) in data_dict:
                     data_dict[tuple(temp_tn)] = temp_sv
                 else:
                     data_dict[tuple([temp_tn, 2])] = temp_sv
@@ -271,6 +271,369 @@ class MainApplication(tk.Frame):
 
         
 
+    
+
+    def dicts_to_excel_data(self, dicts):
+
+        try:
+
+            self.status_label.config(text='separating by nests...',  fg='black')
+            global amount_of_nests
+            global dicts_counter
+            counter = 0
+
+            test_names = []
+
+            total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
+            self.pb1.config(mode="determinate")
+            
+            for dict in get_dicts_only(dicts):
+
+                for test_name in dict.keys():
+
+                    counter += 1
+                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+
+                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
+
+                    if not test_name in test_names:
+                        test_names.append(test_name)
+                
+            set_of_values = []
+            sample_count = 0
+            for idx, dict in enumerate(get_dicts_only(dicts)):
+                sample_count += 1
+                values = []
+                for test_name in test_names:
+
+                    counter +=1
+
+                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+
+                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
+
+                    if not test_name in list(dict.keys()):
+                        # print('NOT FOUND ------------------------')
+                        values.append("NONE")
+                    else:
+                        # print("si hay -----------------------------")
+                        values.append(dict[test_name][0])
+                
+                serial  = get_serials_only(dicts)[idx]
+                # print("this is a serial: ", serial)
+                values.insert(0, serial)
+                set_of_values.append(values)
+
+            header_labels = []
+            
+            test_names.insert(0, "Test names")
+            header_labels.append(tuple(test_names))
+            
+            if has_limits:
+            
+                low_limits = lf.get_limits(dicts)
+                header_labels.append(tuple(low_limits))
+                # print("ll len: ", len(low_limits))
+            
+                high_limits = lf.get_limits(dicts, False)
+                header_labels.append(tuple(high_limits))
+                # print("hl len: ", len(high_limits))
+
+            max_values = lf.get_maxs(dicts)
+            header_labels.append(tuple(max_values))
+            # print("max len: ", len(max_values))
+            min_values = lf.get_mins(dicts)
+            header_labels.append(tuple(min_values))
+            # print("min len: ", len(min_values))
+
+            mean_values = lf.get_means(dicts)
+            header_labels.append(tuple(mean_values))
+            # print("mean len: ", len(mean_values))
+
+            
+
+            # print("vals: ", test_names)
+
+            dicts_counter += 1
+
+            if dicts_counter == amount_of_nests:
+                try:
+                    self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
+                    self.table_tittle.pack(anchor=tk.CENTER)
+                    self.preview_table = tk.ttk.Treeview(self.middle_frame)
+                    self.preview_table.pack(fill=tk.BOTH, expand=True)
+                    self.preview_table['columns']= test_names
+                    self.preview_table.column("#0", width=-1300)
+                    self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+   
+                    for test_name in test_names[:10]:
+                        self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
+                        self.preview_table.heading(test_name,text=test_name)
+                    self.preview_table['show'] = 'headings'
+
+                    for idx, vals in enumerate(np.array(set_of_values)[:10]):
+                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
+    
+                except Exception as err:
+                    self.show_error(err, "there was an error")
+
+            return tuple(header_labels), set_of_values
+        except Exception as err:
+            self.show_error(err, "excel conversion error")
+
+
+
+
+    def update_progress_bar(self, actual_iteracion, total_iterations, left_bars_text = ''):
+
+        new = (actual_iteracion * 100) / total_iterations
+
+        self.root.update_idletasks()
+        new += 0.1
+        new = min([new, 100])
+        self.pb1['value'] = new
+        
+        self.progress_bar_label.config(text=str(int(new)) + '%' + left_bars_text)
+
+
+
+
+    def log_to_tree(self, raw_data:str):
+
+        try:
+
+            if raw_data[2:7] != 'BATCH':
+                raw_data = raw_data[raw_data.find("{@BATCH"):]
+
+            root = Node('root')
+
+            extract_data = ""
+
+            prev_name = ''
+            blck_counter = 0
+            for idx, char in enumerate(raw_data):
+
+                if char == '{':
+
+                    name = raw_data[idx+2:raw_data.index("|", idx)]
+
+                    if name == 'BLOCK':
+                        blck_counter += 1
+
+                    if prev_name == 'BTEST':
+
+                        extract_data += '\n'
+                    
+                    elif prev_name == 'BATCH' and name == 'BTEST':
+                        pass
+                    elif prev_name == 'BATCH':
+                        extract_data += '\n'
+                    
+                    prev_name = name
+
+                elif char == '}':
+                    pass
+                    
+                else:
+                    extract_data += char
+            
+            new_data_ = extract_data.split("\n\n")
+
+            btch_count = 0
+
+            new_data = []
+            for line in new_data_:
+
+                name = line[1:3]
+                
+                if 'ET' in line:
+                    pass
+                elif name == 'PF' or name == 'TS':
+                    pass
+                elif line[1:6] == 'BTEST':
+                    pass
+                elif line[1:5] == 'TJET':
+                    pass
+                else:
+
+                    new_data.append(line)
+
+            for idx, data in enumerate(new_data):
+
+                if len(data) > 1:
+                    name = data[1:data.index("|", 1)]
+                    serial_ = ""
+                    if name == 'BATCH' or name == '@BATCH':
+
+                        btch_count += 1
+                        blck_count = 0
+
+                        if name == '@BATCH':
+                            name = name[1:]
+
+                        separated_batch_data = data.split("|")
+
+                        # print("separated data: ", separated_batch_data)
+
+                        if len(separated_batch_data) >= 16:
+
+                            serial_ = separated_batch_data[15] # the value with the index 15 has the serial
+                        else:
+                            serial_ = separated_batch_data[14]
+
+                        temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_)
+
+                        #this loop passes data without mesurments and keeps foreward data with mesurements
+
+                        if not self.can_show_fails.get():
+                            new_sub_dataset = []
+                            for sub_data in new_data[idx+1:]:
+                                if len(sub_data) > 1:
+                                    name = sub_data[1:sub_data.index("|")]
+                                    ind_data = sub_data.split('|')
+
+                                    if len(ind_data) > 2:
+                                        if "@A" in ind_data[2]:
+                                            if name.startswith("@"):
+                                                sub_data = sub_data[1:]
+                                            else:
+                                                pass
+                                            new_sub_dataset.append(sub_data)
+
+                            new_data = new_sub_dataset
+
+                        for sub_data in new_data:
+
+                            if len(sub_data) > 1:
+                                name = sub_data[1:sub_data.index("|")]
+                                if name == 'BLOCK':
+
+                                    blck_count += 1
+
+                                    block_data = sub_data.split('\n')[1:]
+
+                                    t_name = sub_data.split('\n')[0].split('|')[1]
+
+                                    temp_blck = Node(name + str(blck_count), parent=temp_btch_node, test_name=t_name)
+
+                                    for b_data in block_data:
+        
+                                        ind_data = b_data.split('|') # indidual data or separated data 
+                                        
+                                        new_ind_data = [] #re-process data to be separated again if necessary
+
+                                        for d in ind_data:
+
+                                            if 'LIM' in d:
+                                                split_d = d.split("@")
+                                                for sd in split_d:
+                                                    new_ind_data.append(sd)
+                                            else:
+                                                new_ind_data.append(d)
+
+                                        ind_data = new_ind_data
+
+                                        if len(ind_data) > 2:
+
+                                            # print("ind data:", ind_data)
+                                            global has_limits
+                                            if len(ind_data) >= 4:
+
+                                                
+                                                print("si tiene limites")
+
+                                                if 'LIM' in ind_data[3]:
+                                                    has_limits = True
+
+                                                    comp_name = ind_data[0][3:] #anade el nombre del componente
+                                                
+                                                else:
+
+                                                    comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
+
+                                                temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
+
+                                                limit_name = ''
+
+                                                for d in ind_data:
+
+                                                    if 'LIM' in d:
+                                                        limit_name = d
+            
+                                                if not limit_name == '':
+                                                    limits = ind_data[-int(limit_name[-1]):]
+                                                    temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
+                                            else:
+                                                has_limits = False
+                                                print("no tiene limites")
+                                                if len(ind_data) == 3:
+
+                                                    comp_name = ind_data[0][3:] #anade el nombre del componente
+                                                
+                                                elif len(ind_data) == 4:
+                                                    comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
+
+                                                temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
+
+                                else:
+                                    pass
+
+            # print("this is the root", RenderTree(root))
+
+            return root
+        except Exception as err:
+            self.show_error(err, "log to tree failed")
+    
+    def trees_to_dicts(self, trees):
+
+        try:
+
+            dicts = []
+
+            for tree in trees:
+                # print(RenderTree(tree))
+                # print(tree.children)
+
+                dict = {}
+                
+                for batch in tree.children:
+                    
+                    
+                    for idx, block in enumerate(batch.children): #the block has the name of the test
+                        # print("children: ", block.children)
+                        if len(block.children) > 1:
+                            
+        
+                            for comp in block.children:
+
+                                comp_name = "-" + comp.name
+
+                                test_name = block.test_name + comp_name
+
+                                if len(comp.children) > 0:
+
+                                    lims = comp.children[0].value
+
+                                    dict[test_name] = [comp.value, lims]
+                                else:
+                                    # print("comp: ", comp)
+                                    dict[test_name] = [comp.value]
+                        else:
+
+                            if len(block.children[0].children) > 0:
+
+                                dict[block.test_name] = [block.children[0].value, block.children[0].children[0].value]
+                            else:
+                                dict[block.test_name] = [block.children[0].value]
+                                # print("gola")
+
+                    dicts.append([batch.serial, dict])  
+
+            return dicts
+
+        except Exception as err:
+            self.show_error(err, "trees to dictionary failed")
+    
     def export_caller(self, dicts_data, ids):
         thread_pool_executor.submit(self.export_to_excel, dicts_data, ids)
 
@@ -344,276 +707,6 @@ class MainApplication(tk.Frame):
     in line: {2}".format(e, exc_type, exc_tb.tb_lineno)
         tk.messagebox.showerror(tittle_error, error)
 
-
-    def dicts_to_excel_data(self, dicts):
-
-        try:
-
-            self.status_label.config(text='separating by nests...',  fg='black')
-            global amount_of_nests
-            global dicts_counter
-            counter = 0
-
-            test_names = []
-
-            total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) * 2
-            self.pb1.config(mode="determinate")
-            
-            for dict in get_dicts_only(dicts):
-
-                for test_name in dict.keys():
-
-                    counter += 1
-                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
-
-                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
-
-                    if not test_name in test_names:
-                        test_names.append(test_name)
-                
-            set_of_values = []
-            sample_count = 0
-            for idx, dict in enumerate(get_dicts_only(dicts)):
-                sample_count += 1
-                values = []
-                for test_name in test_names:
-
-                    counter +=1
-
-                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
-
-                    self.update_progress_bar(counter, total_iterations, left_pbs_str)
-
-                    if not test_name in list(dict.keys()):
-                        # print('NOT FOUND ------------------------')
-                        values.append("NONE")
-                    else:
-                        # print("si hay -----------------------------")
-                        values.append(dict[test_name][0])
-                
-                serial  = get_serials_only(dicts)[idx]
-                print("this is a serial: ", serial)
-                values.insert(0, serial)
-                set_of_values.append(values)
-            
-            low_limits = lf.get_limits(dicts)
-            # print("ll len: ", len(low_limits))
-            
-            high_limits = lf.get_limits(dicts, False)
-            # print("hl len: ", len(high_limits))
-
-            max_values = lf.get_maxs(dicts)
-            # print("max len: ", len(max_values))
-            min_values = lf.get_mins(dicts)
-            # print("min len: ", len(min_values))
-
-            mean_values = lf.get_means(dicts)
-            # print("mean len: ", len(mean_values))
-
-            test_names.insert(0, "Test names")
-
-            set_of_vals = np.array(set_of_values)
-            # print("vals: ", test_names)
-
-            dicts_counter += 1
-
-            if dicts_counter == amount_of_nests:
-                try:
-                    self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
-                    self.table_tittle.pack(anchor=tk.CENTER)
-                    self.preview_table = tk.ttk.Treeview(self.middle_frame)
-                    self.preview_table.pack(fill=tk.BOTH, expand=True)
-                    self.preview_table['columns']= test_names
-                    self.preview_table.column("#0", width=-1300)
-                    self.preview_table.heading("#0",text="",anchor=tk.CENTER)
-   
-                    for test_name in test_names[:10]:
-                        self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
-                        self.preview_table.heading(test_name,text=test_name)
-                    self.preview_table['show'] = 'headings'
-
-                    for idx, vals in enumerate(np.array(set_of_values)[:10]):
-                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
-    
-                except Exception as err:
-                    self.show_error(err, "there was an error")
-
-            return tuple([tuple(test_names), tuple(low_limits), tuple(high_limits), tuple(min_values), tuple(max_values), tuple(mean_values)]), set_of_values
-        except Exception as err:
-            self.show_error(err, "excel conversion error")
-
-
-
-
-    def update_progress_bar(self, actual_iteracion, total_iterations, left_bars_text = ''):
-
-        new = (actual_iteracion * 100) / total_iterations
-
-        self.root.update_idletasks()
-        new += 0.1
-        new = min([new, 100])
-        self.pb1['value'] = new
-        
-        self.progress_bar_label.config(text=str(int(new)) + '%' + left_bars_text)
-
-
-
-
-    def log_to_tree(self, raw_data:str):
-
-        if raw_data[2:7] != 'BATCH':
-            raw_data = raw_data[raw_data.find("{@BATCH"):]
-
-        root = Node('root')
-
-        extract_data = ""
-
-        prev_name = ''
-        blck_counter = 0
-        for idx, char in enumerate(raw_data):
-
-            if char == '{':
-
-                name = raw_data[idx+2:raw_data.index("|", idx)]
-
-                if name == 'BLOCK':
-                    blck_counter += 1
-
-                if prev_name == 'BTEST':
-
-                    extract_data += '\n'
-                
-                elif prev_name == 'BATCH' and name == 'BTEST':
-                    pass
-                elif prev_name == 'BATCH':
-                    extract_data += '\n'
-                
-                prev_name = name
-
-            elif char == '}':
-                pass
-                
-            else:
-                extract_data += char
-        
-        new_data_ = extract_data.split("\n\n")
-
-        btch_count = 0
-
-        new_data = []
-        for line in new_data_:
-
-            name = line[1:3]
-            
-            if 'ET' in line:
-                pass
-            elif name == 'PF' or name == 'TS':
-                pass
-            elif line[1:6] == 'BTEST':
-                pass
-            elif line[1:5] == 'TJET':
-                pass
-            else:
-
-                new_data.append(line)
-
-        for idx, data in enumerate(new_data):
-
-            if len(data) > 1:
-                name = data[1:data.index("|", 1)]
-                serial_ = ""
-                if name == 'BATCH' or name == '@BATCH':
-
-                    btch_count += 1
-                    blck_count = 0
-
-                    if name == '@BATCH':
-                        name = name[1:]
-
-                    separated_batch_data = data.split("|")
-
-                    serial_ = separated_batch_data[15] # the value with the index 15 has the serial
-
-                    temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_)
-
-                    #this loop passes data without mesurments and keeps foreward data with mesurements
-
-                    if not self.can_show_fails.get():
-                        new_sub_dataset = []
-                        for sub_data in new_data[idx+1:]:
-                            if len(sub_data) > 1:
-                                name = sub_data[1:sub_data.index("|")]
-                                ind_data = sub_data.split('|')
-
-                                if len(ind_data) > 2:
-                                    if "@A" in ind_data[2]:
-                                        if name.startswith("@"):
-                                            sub_data = sub_data[1:]
-                                        else:
-                                            pass
-                                        new_sub_dataset.append(sub_data)
-
-                        new_data = new_sub_dataset
-
-                    for sub_data in new_data:
-
-                        if len(sub_data) > 1:
-                            name = sub_data[1:sub_data.index("|")]
-                            if name == 'BLOCK':
-
-                                blck_count += 1
-
-                                block_data = sub_data.split('\n')[1:]
-
-                                t_name = sub_data.split('\n')[0].split('|')[1]
-
-                                temp_blck = Node(name + str(blck_count), parent=temp_btch_node, test_name=t_name)
-
-                                for b_data in block_data:
-     
-                                    ind_data = b_data.split('|') # indidual data or separated data 
-                                    
-                                    new_ind_data = [] #re-process data to be separated again if necessary
-
-                                    for d in ind_data:
-
-                                        if 'LIM' in d:
-                                            split_d = d.split("@")
-                                            for sd in split_d:
-                                                new_ind_data.append(sd)
-                                        else:
-                                            new_ind_data.append(d)
-
-                                    ind_data = new_ind_data
-
-                                    if len(ind_data) > 2:
-
-                                        if 'LIM' in ind_data[3]:
-
-                                            comp_name = ind_data[0][3:] #anade el nombre del componente
-                                        
-                                        else:
-
-                                            comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
-
-                                        temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
-
-                                        limit_name = ''
-
-                                        for d in ind_data:
-
-                                            if 'LIM' in d:
-                                                limit_name = d
-     
-                                        if not limit_name == '':
-                                            limits = ind_data[-int(limit_name[-1]):]
-                                            temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
-                            else:
-                                pass
-
-        # print("this is the root", RenderTree(root))
-
-        return root
             
 
 def get_dicts_only(dicts):
@@ -629,38 +722,12 @@ def get_serials_only(dicts):
     return serials_only
 
 
-def trees_to_dicts(trees):
 
-    dicts = []
-
-    for tree in trees:
-
-        dict = {}
         
-        for batch in tree.children:
-            
-            for idx, block in enumerate(batch.children): #the block has the name of the test
 
-                if len(block.children) > 1:
- 
-                    for comp in block.children:
 
-                        comp_name = "-" + comp.name
 
-                        test_name = block.test_name + comp_name
 
-                        lims = comp.children[0].value
-
-                        dict[test_name] = [comp.value, lims]
-                else:
-
-                    if len(block.children[0].children) > 0:
-
-                        dict[block.test_name] = [block.children[0].value, block.children[0].children[0].value]
-
-            dicts.append([batch.serial, dict])  
-
-    return dicts
 
 
 
@@ -669,7 +736,14 @@ def trees_to_dicts(trees):
 def convert_to_dataframe(data, cols):
     #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
     #agregando un [:-1]
-    df = pd.DataFrame(data, columns = [list(cols[0]), list(cols[1]), list(cols[2]), list(cols[3]), list(cols[4]), list(cols[5])])
+    # print("cols: ", cols)
+    new_cols = []
+
+    for col in cols:
+        new_cols.append(list(col))
+        
+    # print("sort cols: ", new_cols)
+    df = pd.DataFrame(data, columns = new_cols)
     df.index = np.arange(1, len(df)+1)
     # print("this is df: \n", df)
     return df
