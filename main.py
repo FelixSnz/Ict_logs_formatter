@@ -139,7 +139,7 @@ class MainApplication(tk.Frame):
 
         self.bottom_frame.pack(fill=tk.BOTH, side=tk.BOTTOM)
         self.bottom_frame2.pack(fill=tk.BOTH, side=tk.BOTTOM)
-        self.status_label.config(text=" ", bg='gray94')
+        self.status_label.config(text=" ", bg='gray94',  fg='black')
         
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -159,7 +159,7 @@ class MainApplication(tk.Frame):
         
         # self.preview_table.delete(*self.preview_table.get_children())
         
-        self.status_label.config(text=" ", bg='gray94')
+        self.status_label.config(text=" ", bg='gray94',  fg='black')
         currdir = os.getcwd()
         tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
@@ -174,12 +174,12 @@ class MainApplication(tk.Frame):
     def log_to_excel_process(self):
 
         try:
-            self.status_label.config(text=" ", bg='gray94')
+            self.status_label.config(text=" ", bg='gray94',  fg='black')
 
             if self.preview_table != None:
                 self.preview_table.destroy()
                 self.table_tittle.destroy()
-
+            self.set_buttons_state("disabled")
             global dicts_counter
             dicts_counter = 0
 
@@ -208,7 +208,7 @@ class MainApplication(tk.Frame):
     
 
             self.pb1.config(mode="determinate")
-            self.status_label.config(text="formating log files...")
+            self.status_label.config(text="formating log files...",  fg='black')
             self.opn_excel_loc.forget()
 
 
@@ -232,9 +232,17 @@ class MainApplication(tk.Frame):
 
 
                         nest_number = self.get_nest_number(file_name)
+                        num_lines = sum(1 for line in open(fname))
 
                         if not nest_number in set_of_trees:
-                            set_of_trees[nest_number] = []
+
+                            if self.can_show_fails.get():
+                                set_of_trees[nest_number] = []
+                            else:
+                                if num_lines > 30:
+                                    set_of_trees[nest_number] = []
+
+                        
             
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
@@ -292,7 +300,7 @@ class MainApplication(tk.Frame):
             root.update_idletasks()
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
-            self.status_label.config(text="Export is enabled!")
+            self.status_label.config(text="Export is enabled!",  fg='black')
 
             self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
@@ -346,7 +354,7 @@ class MainApplication(tk.Frame):
         try:
             print("ids: ", ids)
             global amount_of_nests
-            self.status_label.config(text=" ", bg='gray94')
+            self.status_label.config(text=" ", bg='gray94',  fg='black')
             self.set_buttons_state("disabled")
             self.opn_excel_loc.forget()
             counter = 0
@@ -363,7 +371,7 @@ class MainApplication(tk.Frame):
                     key = key[0]
                     print("key: ", key)
                 # print("this is the value: ", value)
-                self.status_label.config(text="sorting the data...")
+                self.status_label.config(text="sorting the data...",  fg='black')
                 df = convert_to_dataframe(value, key)
                 dfs.append(df)
             
@@ -380,7 +388,7 @@ class MainApplication(tk.Frame):
                     status_text = "creating sheets..."
                     pb1_label_text = str(int(0))+'% | ('+ str(idx+1)+"/" + str(amount_of_nests)+")"
                     self.progress_bar_label.config(text=pb1_label_text)
-                    self.status_label.config(text=status_text)
+                    self.status_label.config(text=status_text,  fg='black')
                     counter += 1
                     
                     nest_id = ids[idx]
@@ -396,7 +404,7 @@ class MainApplication(tk.Frame):
             
 
             
-            self.status_label.config(text="Done!", bg='green')
+            self.status_label.config(text="Done!", bg='green', fg='white')
             self.opn_excel_loc.config(command=lambda:explore(file.name))
             self.opn_excel_loc.pack(side=tk.LEFT)
             self.pb1.config(mode="determinate")
@@ -424,7 +432,7 @@ class MainApplication(tk.Frame):
         # print("this are the dicts: ", dicts)
         try:
 
-            self.status_label.config(text='separating by nests...')
+            self.status_label.config(text='separating by nests...',  fg='black')
             global amount_of_nests
             global dicts_counter
             counter = 0
