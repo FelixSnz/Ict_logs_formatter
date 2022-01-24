@@ -352,7 +352,7 @@ class MainApplication(tk.Frame):
         
 
         try:
-            print("ids: ", ids)
+            # print("ids: ", ids)
             global amount_of_nests
             self.status_label.config(text=" ", bg='gray94',  fg='black')
             self.set_buttons_state("disabled")
@@ -366,10 +366,10 @@ class MainApplication(tk.Frame):
             file = asksaveasfile(filetypes = files, defaultextension = files)
             for key, value in data_dict.items():
                 # print("anobueeno")
-                print("this is the key: ", key)
+                # print("this is the key: ", key)
                 if key[1] == 2:
                     key = key[0]
-                    print("key: ", key)
+                    # print("key: ", key)
                 # print("this is the value: ", value)
                 self.status_label.config(text="sorting the data...",  fg='black')
                 df = convert_to_dataframe(value, key)
@@ -459,7 +459,7 @@ class MainApplication(tk.Frame):
                 
             set_of_values = []
             sample_count = 0
-            for dict in get_dicts_only(dicts):
+            for idx, dict in enumerate(get_dicts_only(dicts)):
                 sample_count += 1
                 values = []
                 for test_name in test_names:
@@ -478,8 +478,11 @@ class MainApplication(tk.Frame):
                         # print("si hay -----------------------------")
                         values.append(dict[test_name][0])
 
-                serial  = get_serials_only(dicts)[get_dicts_only(dicts).index(dict)]
-                # print("this is a serial: ", serial)
+                
+                # print("serials: ", get_serials_only(dicts))
+
+                serial  = get_serials_only(dicts)[idx]
+                print("this is a serial: ", serial)
                 values.insert(0, serial)
                 set_of_values.append(values)
             
@@ -502,7 +505,7 @@ class MainApplication(tk.Frame):
 
 
             set_of_vals = np.array(set_of_values)
-            print("vals: ", test_names)
+            # print("vals: ", test_names)
 
             
 
