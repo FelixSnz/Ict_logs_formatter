@@ -110,7 +110,6 @@ class MainApplication(tk.Frame):
         self.textEntrySerial = tk.StringVar()
         self.serialEntry = tk.Entry(self.sec_top_frame, textvariable=self.textEntrySerial, bg='white')
         self.serialEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.textEntrySerial.trace("w", lambda name, index,mode, var=self.textEntrySerial: self.pathEntry_callback(var))
         self.convert_btn = tk.Button(self.sec_top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
         self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
         self.convert_btn["state"] = "disabled"
@@ -604,15 +603,15 @@ class MainApplication(tk.Frame):
                             date_vals.append(val[:2])
 
                         from_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
-                        print("from date: ", from_date)
-                        print(date_)
+                        # print("from date: ", from_date)
+                        # print(date_)
 
                         date_vals = str(self.to_cal.get_date()).split("-")
                         time_vals = self.to_24h_format(self.to_time_lbl['text'])
                         for val in time_vals:
                             date_vals.append(val[:2])
                         to_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
-                        print("from date: ", to_date)
+                        # print("from date: ", to_date)
                         # print(date_vals)
 
                         if not dft.is_in_date_range(from_date, date_, to_date):
@@ -625,6 +624,11 @@ class MainApplication(tk.Frame):
                             serial_ = separated_batch_data[15] # the value with the index 15 has the serial
                         else:
                             serial_ = separated_batch_data[14]
+                        
+                        print("this is the expected serial: ", self.textEntrySerial.get())
+                        print("this is the found serial: ", serial_)
+                        if serial_ != self.textEntrySerial.get() and self.textEntrySerial.get() != "":
+                            return None
 
                         temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_, date = date_)
 
