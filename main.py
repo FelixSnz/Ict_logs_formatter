@@ -8,6 +8,8 @@ from anytree import RenderTree
 import tkinter as tk
 from tkinter import tix
 import sys, os
+from tkcalendar import DateEntry
+from datetime import datetime
 
 import time as tm
 
@@ -29,6 +31,10 @@ from concurrent import futures
 from concurrent import *
 import os
 import subprocess
+
+import tkinter as tk
+from tktimepicker import SpinTimePickerModern
+from tktimepicker import constants
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 logs_path = str(" ")
@@ -79,13 +85,13 @@ class MainApplication(tk.Frame):
 
         self.upper_top_frame.pack(fill=tk.BOTH)
         self.top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
-        self.path_label = tk.Label(self.top_frame, text='Logs path: ', bg='gray94')
+        self.path_label = tk.Label(self.top_frame, text='          Logs path: ', bg='gray94')
         self.path_label.pack(side=tk.LEFT)
         self.textEntryPath = tk.StringVar()
         self.pathEntry = tk.Entry(self.top_frame, textvariable=self.textEntryPath, bg='white')
         self.pathEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.textEntryPath.trace("w", lambda name, index,mode, var=self.textEntryPath: self.pathEntry_callback(var))
-        self.browse_btn = tk.Button(self.top_frame, text='browse', command=lambda:self.browse_for_path())
+        self.browse_btn = tk.Button(self.top_frame, text=' browse', command=lambda:self.browse_for_path())
         self.browse_btn.pack(side=tk.LEFT,  anchor=tk.NW)
         brws_btn_hover_msg = tix.Balloon(root)
         brws_btn_hover_msg.bind_widget(self.browse_btn, 
@@ -94,7 +100,17 @@ class MainApplication(tk.Frame):
         for sub in brws_btn_hover_msg.subwidgets_all():
             sub.config(bg='grey')
         
-        self.convert_btn = tk.Button(self.top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
+        self.top_frame.pack(fill=tk.BOTH)
+        
+
+        self.sec_top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.path_label = tk.Label(self.sec_top_frame, text='Serial (optional): ', bg='gray94')
+        self.path_label.pack(side=tk.LEFT)
+        self.textEntrySerial = tk.StringVar()
+        self.serialEntry = tk.Entry(self.sec_top_frame, textvariable=self.textEntrySerial, bg='white')
+        self.serialEntry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.textEntrySerial.trace("w", lambda name, index,mode, var=self.textEntrySerial: self.pathEntry_callback(var))
+        self.convert_btn = tk.Button(self.sec_top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
         self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
         self.convert_btn["state"] = "disabled"
         cnvrt_btn_hover_msg = tix.Balloon(root)
@@ -103,8 +119,46 @@ class MainApplication(tk.Frame):
 
         for sub in cnvrt_btn_hover_msg.subwidgets_all():
             sub.config(bg='grey')
+        
+        self.sec_top_frame.pack(fill=tk.BOTH)
 
-        self.top_frame.pack(fill=tk.BOTH)
+        
+
+        self.pre_top = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.pre_top_up = tk.Frame(self.root, bg='gray94', highlightthickness=2)
+
+        self.from_label = tk.Label(self.pre_top_up, text="From:", bg='gray94')
+        self.from_label.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+
+        
+        self.cal = DateEntry(self.pre_top_up, selectmode="day", year=2016, month=10,day=21, bg='gray94')
+        self.cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.time_lbl = tk.Label(self.pre_top_up, text="00:00 AM", bg='gray94')
+        self.time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+
+        self.time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.get_time())
+        self.time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.pre_top_up.pack(fill=tk.BOTH)
+
+        self.pre_top_down = tk.Frame(self.root, bg='gray94', highlightthickness=2)
+
+        self.to_label = tk.Label(self.pre_top_down, text="     To:", bg='gray94')
+        self.to_label.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+
+        
+        self.cal = DateEntry(self.pre_top_down, selectmode="day", year=2016, month=10,day=21, bg='gray94')
+        self.cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.time_lbl = tk.Label(self.pre_top_down, text="00:00 AM", bg='gray94')
+        self.time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+
+        self.time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.get_time())
+        self.time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.pre_top_down.pack(fill=tk.BOTH)
+
+        self.pre_top.pack(fill=tk.BOTH)
+        
+
+        
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
@@ -119,7 +173,27 @@ class MainApplication(tk.Frame):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
+    def get_time(self):
+
+        top = tk.Toplevel(self.root)
+
+        time_picker = SpinTimePickerModern(top)
+        # time_picker = SpinTimePickerOld(top)
+        time_picker.addAll(constants.HOURS12)  # adds hours clock, minutes and period
+        time_picker.configureAll(bg="#404040", height=1, fg="#ffffff", font=("Times", 16), hoverbg="#404040",
+                                        hovercolor="#d73333", clickedbg="#2e2d2d", clickedcolor="#d73333")
+        time_picker.configure_seprator(bg="#404040", fg="#ffffff")
+        # time_picker.addHours12()
+        # time_picker.addHours24()
+        # time_picker.addMinutes()
+
+        time_picker.pack(expand=True, fill="both")
+
+        ok_btn = tk.Button(top, text="ok", command=lambda: self.updateTime(time_picker.time()))
+        ok_btn.pack()
     
+    def updateTime(self, time):
+        self.time_lbl.configure(text="{}:{} {}".format(*time))
 
     #this function is called whenever thetext of textPathEntry widget changes
     def pathEntry_callback(self, var):
@@ -130,6 +204,8 @@ class MainApplication(tk.Frame):
             self.convert_btn["state"] = "normal"
         else:
             self.convert_btn["state"] = "disabled"
+    
+
 
     #this function is called when browse_btn is pressed and sets expected path of the logs in the variable "logs_path"
     def browse_for_path(self):
@@ -367,21 +443,30 @@ class MainApplication(tk.Frame):
                 print("about to fill the preview table")
                 try:
 
+                    test_names_copy = test_names[:9].copy()
+                    test_names_copy.append("...")
+
                     self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
                     self.table_tittle.pack(anchor=tk.CENTER)
                     self.preview_table = tk.ttk.Treeview(self.middle_frame)
                     self.preview_table.pack(fill=tk.BOTH, expand=True)
-                    self.preview_table['columns']= test_names
+                    self.preview_table['columns']= test_names_copy
                     self.preview_table.column("#0", width=-1300)
                     self.preview_table.heading("#0",text="",anchor=tk.CENTER)
+
+
    
-                    for test_name in test_names[:10]:
+                    for test_name in test_names_copy:
                         self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
                         self.preview_table.heading(test_name,text=test_name)
                     self.preview_table['show'] = 'headings'
 
-                    for idx, vals in enumerate(np.array(set_of_values)[:10,:10]):
-                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=vals)  
+      
+
+                    for idx, vals in enumerate(np.array(set_of_values)[:10,:9]):
+                        new_vals = list(vals)
+                        new_vals.append("...")
+                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=new_vals)  
     
                 except Exception as err:
                     self.show_error(err, "there was an error")
