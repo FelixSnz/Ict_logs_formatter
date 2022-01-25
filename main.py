@@ -10,6 +10,7 @@ from tkinter import tix
 import sys, os
 from tkcalendar import DateEntry
 from datetime import datetime
+import dft
 
 import time as tm
 
@@ -131,13 +132,13 @@ class MainApplication(tk.Frame):
         self.from_label.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
         
-        self.cal = DateEntry(self.pre_top_up, selectmode="day", year=2016, month=10,day=21, bg='gray94')
-        self.cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
-        self.time_lbl = tk.Label(self.pre_top_up, text="00:00 AM", bg='gray94')
-        self.time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.from_cal = DateEntry(self.pre_top_up, selectmode="day", year=2000, month=1,day=13, bg='gray94')
+        self.from_cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.from_time_lbl = tk.Label(self.pre_top_up, text="00:00 AM", bg='gray94')
+        self.from_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.get_time())
-        self.time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.from_time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.set_time(self.from_time_lbl))
+        self.from_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_up.pack(fill=tk.BOTH)
 
         self.pre_top_down = tk.Frame(self.root, bg='gray94', highlightthickness=2)
@@ -146,18 +147,16 @@ class MainApplication(tk.Frame):
         self.to_label.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
         
-        self.cal = DateEntry(self.pre_top_down, selectmode="day", year=2016, month=10,day=21, bg='gray94')
-        self.cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
-        self.time_lbl = tk.Label(self.pre_top_down, text="00:00 AM", bg='gray94')
-        self.time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.to_cal = DateEntry(self.pre_top_down, selectmode="day", year=2023, month=1,day=13, bg='gray94')
+        self.to_cal.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.to_time_lbl = tk.Label(self.pre_top_down, text="00:00 AM", bg='gray94')
+        self.to_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.get_time())
-        self.time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
+        self.to_time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.set_time(self.to_time_lbl))
+        self.to_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_down.pack(fill=tk.BOTH)
 
         self.pre_top.pack(fill=tk.BOTH)
-        
-
         
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
@@ -173,7 +172,7 @@ class MainApplication(tk.Frame):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
-    def get_time(self):
+    def set_time(self, label):
 
         top = tk.Toplevel(self.root)
 
@@ -189,11 +188,24 @@ class MainApplication(tk.Frame):
 
         time_picker.pack(expand=True, fill="both")
 
-        ok_btn = tk.Button(top, text="ok", command=lambda: self.updateTime(time_picker.time()))
+        ok_btn = tk.Button(top, text="ok", command=lambda: self.updateTime(time_picker.time(), label))
         ok_btn.pack()
     
-    def updateTime(self, time):
-        self.time_lbl.configure(text="{}:{} {}".format(*time))
+    def updateTime(self, time, label):
+        label.configure(text="{}:{} {}".format(*time))
+        date_vals = str(self.from_cal.get_date()).split("-")
+
+        time_vals = self.to_24h_format(self.from_time_lbl['text'])
+
+        # print(date_vals)
+        # print(time_vals)
+
+        for val in time_vals:
+            date_vals.append(val[:2])
+        
+        print("eto:", date_vals)
+
+
 
     #this function is called whenever thetext of textPathEntry widget changes
     def pathEntry_callback(self, var):
@@ -260,18 +272,24 @@ class MainApplication(tk.Frame):
 
                     with open(fname) as log_f:
 
-                        file_name = log_f.name.split("\\")[-1]
+                        raw_data = log_f.read()
 
-                        nest_number = self.get_nest_number(file_name)
-                        num_lines = sum(1 for line in open(fname))
+                        tree = self.log_to_tree(raw_data)
 
-                        if not nest_number in set_of_trees:
+                        if tree != None:
 
-                            if self.can_show_fails.get():
-                                set_of_trees[nest_number] = []
-                            else:
-                                if num_lines > 30:
+                            file_name = log_f.name.split("\\")[-1]
+
+                            nest_number = self.get_nest_number(file_name)
+                            num_lines = sum(1 for line in open(fname))
+
+                            if not nest_number in set_of_trees:
+
+                                if self.can_show_fails.get():
                                     set_of_trees[nest_number] = []
+                                else:
+                                    if num_lines > 30:
+                                        set_of_trees[nest_number] = []
             counter = 0
             self.status_label.config(text="formating log files...",  fg='black')
             global amount_of_nests
@@ -557,6 +575,7 @@ class MainApplication(tk.Frame):
                 if len(data) > 1:
                     name = data[1:data.index("|", 1)]
                     serial_ = ""
+                    date_ = ""
                     if name == 'BATCH' or name == '@BATCH':
 
                         btch_count += 1
@@ -569,13 +588,45 @@ class MainApplication(tk.Frame):
 
                         # print("separated data: ", separated_batch_data)
 
+                        raw_date = separated_batch_data[7]
+                        year = int("20"+raw_date[0:2])
+                        month = int(raw_date[2:4])
+                        day = int(raw_date[4:6])
+                        hour = int(raw_date[6:8])
+                        min = int(raw_date[8:10])
+                        seg = int(raw_date[10:12])
+
+                        date_ = datetime(year, month, day, hour, min, seg)
+
+                        date_vals = str(self.from_cal.get_date()).split("-")
+                        time_vals = self.to_24h_format(self.from_time_lbl['text'])
+                        for val in time_vals:
+                            date_vals.append(val[:2])
+
+                        from_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
+                        print("from date: ", from_date)
+                        print(date_)
+
+                        date_vals = str(self.to_cal.get_date()).split("-")
+                        time_vals = self.to_24h_format(self.to_time_lbl['text'])
+                        for val in time_vals:
+                            date_vals.append(val[:2])
+                        to_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
+                        print("from date: ", to_date)
+                        # print(date_vals)
+
+                        if not dft.is_in_date_range(from_date, date_, to_date):
+                            print("mamguevo")
+                            return None
+
+
                         if len(separated_batch_data) >= 16:
 
                             serial_ = separated_batch_data[15] # the value with the index 15 has the serial
                         else:
                             serial_ = separated_batch_data[14]
 
-                        temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_)
+                        temp_btch_node = Node(name + str(btch_count), parent=root, serial=serial_, date = date_)
 
                         #this loop passes data without mesurments and keeps foreward data with mesurements
 
@@ -679,7 +730,19 @@ class MainApplication(tk.Frame):
         except Exception as err:
             self.show_error(err, "log to tree failed")
     
+    def to_24h_format(self, _12h_format):
+        time_vals = _12h_format[:5].split(":")
+        am_pm = _12h_format[-2:]
+
+        if am_pm == "PM":
+            time_vals[0] = str(int(time_vals[0]) +12)
+        
+        return time_vals
+
+
+    
     def trees_to_dicts(self, trees):
+        
 
         try:
 
@@ -692,6 +755,7 @@ class MainApplication(tk.Frame):
                 dict = {}
                 
                 for batch in tree.children:
+
                     
                     
                     for idx, block in enumerate(batch.children): #the block has the name of the test
