@@ -1,7 +1,5 @@
 
-from cgitb import text
-import string
-from textwrap import indent
+
 from turtle import bgcolor, width
 from anytree.node.node import Node
 from anytree import RenderTree
@@ -11,6 +9,7 @@ import sys, os
 from tkcalendar import DateEntry
 from datetime import datetime
 import dft
+import spc
 
 import time as tm
 
@@ -44,6 +43,7 @@ dicts_counter = 0
 amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 has_limits = True
+nest_numbers = []
 
 class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
@@ -158,6 +158,7 @@ class MainApplication(tk.Frame):
         self.pre_top.pack(fill=tk.BOTH)
         
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.tab_controller = TabController(self.middle_frame)
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
@@ -202,7 +203,7 @@ class MainApplication(tk.Frame):
         for val in time_vals:
             date_vals.append(val[:2])
         
-        print("eto:", date_vals)
+
 
 
 
@@ -252,7 +253,7 @@ class MainApplication(tk.Frame):
 
             except Exception as err:
                 self.browse_btn["state"] = "normal"
-                self.show_error(err, "invalid path")
+                show_error(err, "invalid path")
                 raise RuntimeError
 
             self.pb1.config(mode="determinate")
@@ -286,9 +287,11 @@ class MainApplication(tk.Frame):
 
                                 if self.can_show_fails.get():
                                     set_of_trees[nest_number] = []
+                                    nest_numbers.append(nest_number)
                                 else:
                                     if num_lines > 30:
                                         set_of_trees[nest_number] = []
+                                        nest_numbers.append(nest_number)
             counter = 0
             self.status_label.config(text="formating log files...",  fg='black')
             global amount_of_nests
@@ -331,7 +334,7 @@ class MainApplication(tk.Frame):
 
             self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
-            self.show_error(err, "data extraction error")
+            show_error(err, "data extraction error")
         
     #returns the nest number given a log file name
     def get_nest_number(self, file_name):
@@ -366,12 +369,13 @@ class MainApplication(tk.Frame):
                     data_dict[tuple([temp_tn, 2])] = temp_sv
 
         except Exception as err:
-            self.show_error(err, "data conversion error")
+            show_error(err, "data conversion error")
         return data_dict, list(set_of_trees.keys())
 
     
 
     def dicts_to_excel_data(self, dicts):
+
 
         try:
 
@@ -456,41 +460,17 @@ class MainApplication(tk.Frame):
 
             dicts_counter += 1
 
-            if dicts_counter == amount_of_nests:
-                print("about to fill the preview table")
-                try:
+            try:
 
-                    test_names_copy = test_names[:9].copy()
-                    test_names_copy.append("...")
+                
+                self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values)
 
-                    self.table_tittle = tk.Label(self.middle_frame, text="Preview table")
-                    self.table_tittle.pack(anchor=tk.CENTER)
-                    self.preview_table = tk.ttk.Treeview(self.middle_frame)
-                    self.preview_table.pack(fill=tk.BOTH, expand=True)
-                    self.preview_table['columns']= test_names_copy
-                    self.preview_table.column("#0", width=-1300)
-                    self.preview_table.heading("#0",text="",anchor=tk.CENTER)
-
-
-   
-                    for test_name in test_names_copy:
-                        self.preview_table.column(test_name ,anchor=tk.CENTER, width=190)
-                        self.preview_table.heading(test_name,text=test_name)
-                    self.preview_table['show'] = 'headings'
-
-      
-
-                    for idx, vals in enumerate(np.array(set_of_values)[:10,:9]):
-                        new_vals = list(vals)
-                        new_vals.append("...")
-                        self.preview_table.insert(parent='',index='end',iid=idx,text='', values=new_vals)  
-    
-                except Exception as err:
-                    self.show_error(err, "there was an error")
+            except Exception as err:
+                show_error(err, "there was an error")
 
             return tuple(header_labels), set_of_values
         except Exception as err:
-            self.show_error(err, "excel conversion error")
+            show_error(err, "excel conversion error")
 
 
 
@@ -615,7 +595,7 @@ class MainApplication(tk.Frame):
                         # print(date_vals)
 
                         if not dft.is_in_date_range(from_date, date_, to_date):
-                            print("mamguevo")
+
                             return None
 
 
@@ -625,8 +605,8 @@ class MainApplication(tk.Frame):
                         else:
                             serial_ = separated_batch_data[14]
                         
-                        print("this is the expected serial: ", self.textEntrySerial.get())
-                        print("this is the found serial: ", serial_)
+                        # print("this is the expected serial: ", self.textEntrySerial.get())
+                        # print("this is the found serial: ", serial_)
                         if serial_ != self.textEntrySerial.get() and self.textEntrySerial.get() != "":
                             return None
 
@@ -732,7 +712,7 @@ class MainApplication(tk.Frame):
 
             return root
         except Exception as err:
-            self.show_error(err, "log to tree failed")
+            show_error(err, "log to tree failed")
     
     def to_24h_format(self, _12h_format):
         time_vals = _12h_format[:5].split(":")
@@ -795,7 +775,7 @@ class MainApplication(tk.Frame):
             return dicts
 
         except Exception as err:
-            self.show_error(err, "trees to dictionary failed")
+            show_error(err, "trees to dictionary failed")
     
     def export_caller(self, dicts_data, ids):
         thread_pool_executor.submit(self.export_to_excel, dicts_data, ids)
@@ -854,7 +834,7 @@ class MainApplication(tk.Frame):
             self.opn_excel_loc.pack(side=tk.LEFT)
             self.pb1.config(mode="determinate")
         except Exception as err:
-            self.show_error(err, "export error")
+            show_error(err, "export error")
     
     def set_buttons_state(self, state:str):
         self.export_btn["state"] = state
@@ -863,14 +843,159 @@ class MainApplication(tk.Frame):
 
             
     
-    def show_error(self, e, tittle_error):
+
+def show_error(e, tittle_error):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         error = "     error: {0} \n \
     error type: {1} \n \
     in line: {2}".format(e, exc_type, exc_tb.tb_lineno)
-        tk.messagebox.showerror(tittle_error, error)
+        tk.messagebox.showerror(tittle_error, error)  
+
+
+class TabController:
+    def __init__(self, master):
+        try:
+
+
+            self.notebook = tk.ttk.Notebook(master)
+            self.notebook.bind('<<NotebookTabChanged>>', self.tab_changued)
+
+            self.notebook.pack(fill=tk.BOTH, expand=True)
+            self.temp_tabs = []
+            self.my_trees = []
+            self.my_tn_tree = None
+            self.my_tn_trees = []
+            self.my_tree = None
+            self.master = master
+            self.tab_index = 0
+            self.set_of_values = None
+            self.test_names = None
+        except Exception as err:
+            show_error(err, "tab error")
+
+        #Frames
+    
+
+        
+    
+    def create_tab(self, tab_name, test_names, set_of_values):
+        try:
+            self.set_of_values = set_of_values
+            self.test_names = test_names
+            temp_tab = tk.ttk.Frame(self.notebook)
+            temp_tab.pack(fill=tk.BOTH, expand=True)
+            self.temp_tabs.append(temp_tab)
+
+            self.notebook.add(temp_tab, text=tab_name)
+            tree_scroll = tk.Scrollbar(temp_tab)
+            tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            self.my_tn_tree = tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set)
+            self.my_tn_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set))
+            self.my_tn_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
+            self.my_tn_trees[-1]["columns"] = ['Test names']
+            self.my_tn_trees[-1]['show'] = 'headings'
+            self.my_tn_trees[-1].column('Test names' ,anchor=tk.CENTER, width=190)
+            self.my_tn_trees[-1].heading('Test names',text='Test names')
+
+            for idx, test_name in enumerate(test_names[1:]):
+                self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='', values=test_name) 
+
+            self.my_tn_trees[-1].bind('<Double-1>', lambda event, tn = test_names[1:], sv = list(np.array(set_of_values)[:, 1:]) :self.tree_click_event(tn, sv))
+
+            test_names = test_names[:9].copy()
+            test_names.append("...")
+            self.my_tree = tk.ttk.Treeview(temp_tab)
+            self.my_trees.append(tk.ttk.Treeview(temp_tab))
+            self.my_trees[-1]
+            self.my_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
+            tree_scroll.config(command=self.my_tn_trees[-1].yview)
+
+
+            self.my_trees[-1]["columns"] = test_names
+            self.my_trees[-1]['show'] = 'headings'
+
+
+            for idx, test_name in enumerate(test_names):
+                self.my_trees[-1].column(test_name ,anchor=tk.CENTER, width=190)
+                self.my_trees[-1].heading(test_name,text=test_name)
 
             
+            for idx, vals in enumerate(np.array(set_of_values)[:10,:9]):
+                new_vals = list(vals)
+                new_vals.append("...")
+                self.my_trees[-1].insert(parent='',index='end',iid=idx,text='', values=new_vals) 
+            
+
+            
+        except Exception as err:
+            show_error(err, "tab creation error")
+
+
+        
+    
+    def tree_click_event(self, tn, sv):
+        try:
+
+            item = self.my_tn_trees[self.tab_index].focus()
+            print(item)
+            info = self.my_tn_trees[self.tab_index].item(item, 'values')
+            test_name = info[0]
+            print("info: ", info)
+            print("test name: ", test_name)
+            # test_values = 
+            print()
+            test_values = get_test_values(tn, sv, test_name)
+            print(test_values)
+            spc.plot(test_values, test_name)
+        except Exception as err:
+            show_error(err, "show spc error")
+
+        
+
+    def tab_changued(self, event):
+        try:
+            if len(self.temp_tabs) > 0:
+                self.tab_index = self.notebook.index(self.notebook.select())
+        except Exception as err:
+            show_error(err, "tab error")
+        
+
+    
+    def destroy_tabs(self):
+        for tab in self.temp_tabs:
+            tab.destroy()
+        
+        for tree in self.my_trees:
+            tree.destroy()
+
+        self.my_trees = []
+        self.temp_tabs = []
+
+
+def get_test_values(test_names, set_of_values, values_test_name):
+    values_idx = 0
+    test_values = []
+    print("test names : ", test_names  )
+    
+    for idx, test_name in enumerate(test_names):
+        if test_name == values_test_name:
+            values_idx = idx
+            print("index at find: ", idx)
+            break
+    
+    print("idx: ", values_idx)
+    
+    for values in set_of_values:
+        test_values.append(values[values_idx])
+    
+
+    
+    return test_values
+
+
+
+
 
 def get_dicts_only(dicts):
     dicts_only = []
