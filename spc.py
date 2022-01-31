@@ -1,5 +1,6 @@
 from cProfile import label
-import tkinter as tk 
+import tkinter as tk
+from turtle import bgcolor, color, width 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
 NavigationToolbar2Tk)
 
@@ -13,6 +14,25 @@ serials = []
 dates = []
 
 
+class NewWindow(tk.Toplevel):
+     
+    def __init__(self, master = None, serial = None, date = None):
+        self.serial = serial
+        self.date = date
+         
+        super().__init__(master = master)
+        self.title("New Window")
+        self.geometry("500x300")
+        f = tk.Frame(self, width=300, height=200)
+
+        label = tk.Label(f, text='this is the serial: ' + str(serial))
+        date_label = tk.Label(f, text='this is the date: ' + str(date))
+
+        f.pack()
+        label.pack()
+        date_label.pack()
+
+
 def show_error(e, tittle_error):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         error = "     error: {0} \n \
@@ -21,26 +41,32 @@ def show_error(e, tittle_error):
         tk.messagebox.showerror(tittle_error, error)
 
 
-def on_pick(event):
-    artist = event.artist
-    xmouse, ymouse = event.mouseevent.xdata, event.mouseevent.ydata
-    x, y = artist.get_xdata(), artist.get_ydata()
-    ind = event.ind
+def on_pick(event, root):
 
+    global values
+    global serials
+    global dates
 
-    x, size = sorted(x), len(x)
+    values, size = sorted(values), len(values)
+    y = event.ydata
+    x_ = event.xdata
 
-    res = [x[i + 1] - x[i] for i in range(0, size) if i+1 < size]
-
+    res = [values[i + 1] - values[i] for i in range(0, size) if i+1 < size]
+    print("res: ", res)
 
     index = 0
-    for val in values:
-        if abs(y-val) < min(res) - 0.01:
-            index = values.index(val)
-            break
+    clicked_value = min(values, key=lambda x:abs(x-y))
+    index = values.index(clicked_value)
     
-    print("serial: ", serials[index])
-    print("date: ", dates[index])
+    print("this is the index: ", index)
+    # print("serials: ", serials)
+    # print("dates: ", dates)
+    print("clicked_value: ", clicked_value)
+    print("y: ", y)
+    print("serial: ", serials[int(round(x_))])
+    print("date: ", dates[int(round(x_))])
+
+    a = NewWindow(root, serials[int(round(x_))], dates[int(round(x_))])
 
     # print('Artist picked:', event.artist)
     # print ('{} vertices picked'.format(len(ind)))
@@ -69,6 +95,9 @@ def plot(x, t_name, limits, s, d):
 
         x = np.array(x).astype(np.float)
         x_bar = x
+        global values
+        global serials
+        global dates
         values = x_bar
         serials = s
         dates = d
@@ -78,7 +107,7 @@ def plot(x, t_name, limits, s, d):
 
         # Plot x-bar and R charts
         fig, axs = plt.subplots(1, figsize=(8,3.5))
-        fig.canvas.callbacks.connect('pick_event', on_pick)
+        
         low_limit = np.array(low_limit).astype(float)
         high_limit = np.array(high_limit).astype(float)
 
@@ -116,6 +145,8 @@ def plot(x, t_name, limits, s, d):
         plt_root = tk.Tk()
         plt_root.title('SPC')
         plt_root.geometry('780x410')
+
+        fig.canvas.callbacks.connect('button_press_event', lambda e, rot = plt_root:on_pick(e, rot))
 
 
     

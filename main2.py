@@ -377,14 +377,16 @@ class MainApplication(tk.Frame):
         if '-' in file_name:
             nest_number = file_name.split('-')[:-1]
 
-            if len(nest_number) > 1:
-                new_nest_number = ''
-                for segment in nest_number:
-                    new_nest_number += segment
+            # if len(nest_number) > 1:
+            #     new_nest_number = ''
+            #     for segment in nest_number:
+            #         new_nest_number += segment
                 
-                return str(new_nest_number)
-            else:
-                return str(nest_number[0])
+            #     return str(new_nest_number)
+
+            # else:
+            #     return str(nest_number[0])
+            return nest_number[0]
                 
         else:
             return 'NA'
@@ -469,11 +471,11 @@ class MainApplication(tk.Frame):
                 date = get_dates_only(dicts)[idx]
                 # print("this is a serial: ", serial)
                 values.insert(0, serial)
-                values.inset(1, date)
+                values.insert(1, date)
                 set_of_values.append(values)
 
             header_labels = []
-            
+            test_names.insert(0, "")
             test_names.insert(0, "Test names")
             header_labels.append(tuple(test_names))
             low_limits = []
@@ -481,21 +483,27 @@ class MainApplication(tk.Frame):
             if has_limits:
             
                 low_limits = lf.get_limits(dicts)
+                low_limits.insert(0, "")
                 header_labels.append(tuple(low_limits))
                 # print("ll len: ", len(low_limits))
             
                 high_limits = lf.get_limits(dicts, False)
+                high_limits.insert(0, "")
                 header_labels.append(tuple(high_limits))
                 # print("hl len: ", len(high_limits))
 
             max_values = lf.get_maxs(dicts)
+            max_values.insert(0, "")
+            
             header_labels.append(tuple(max_values))
             # print("max len: ", len(max_values))
             min_values = lf.get_mins(dicts)
+            min_values.insert(0, "")
             header_labels.append(tuple(min_values))
             # print("min len: ", len(min_values))
 
             mean_values = lf.get_means(dicts)
+            mean_values.insert(0, "")
             header_labels.append(tuple(mean_values))
             # print("mean len: ", len(mean_values))
 
@@ -944,7 +952,7 @@ class TabController:
             self.my_tn_trees[-1].column('Test names' ,anchor=tk.CENTER, width=190)
             self.my_tn_trees[-1].heading('Test names',text='Test names')
 
-            for idx, test_name in enumerate(test_names[1:]):
+            for idx, test_name in enumerate(test_names[2:]):
                 self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='', values=test_name)
 
             tn_tree_ballon = tix.Balloon(root)
@@ -957,7 +965,7 @@ class TabController:
 
             # print("setvals: ", set_of_values)
             self.my_tn_trees[-1].bind('<Double-1>', lambda event,
-                                                            tn = test_names[1:],
+                                                            tn = test_names[:],
                                                             sv  = set_of_values,
                                                             limits = test_limits,
                                                             :self.tree_click_event(tn, sv, limits))
@@ -1000,7 +1008,10 @@ class TabController:
                 info = self.my_tn_trees[self.tab_index].item(item, 'values')
                 test_name = info[0]
                 limits = get_test_limits(tn, limits, test_name)
+
                 test_values, serials, dates = get_test_values(tn, set_of_vals, test_name)
+                # print("serials before :", serials)
+                # print("dates before :", dates)
 
                 spc.plot(test_values, test_name, limits, serials, dates)
         except Exception as err:
@@ -1034,13 +1045,16 @@ def get_test_limits(test_names, set_of_values, limits_test_name):
         test_limits = []
         limits_idx = 0
 
+        # print("test names on limit func: ", test_names)
+        # print("this are the limits: ", set_of_values)
+
         for idx, test_name in enumerate(test_names):
             if test_name == limits_test_name:
                 limits_idx = idx
                 break
         
 
-        return set_of_values[limits_idx]
+        return set_of_values[limits_idx -2]
     except Exception as e:
         show_error(e, "get test limits func error")
     
@@ -1052,6 +1066,7 @@ def get_test_values(test_names, set_of_values, values_test_name):
     test_values = []
     serials = []
     dates = []
+    # print("this are the test names: ", test_names)
 
     for idx, test_name in enumerate(test_names):
         if test_name == values_test_name:
@@ -1059,9 +1074,11 @@ def get_test_values(test_names, set_of_values, values_test_name):
             break
 
     for values in set_of_values:
-        serials.append(values[0][0])
-        dates.append(values[0][1])
-        test_values.append(values[values_idx+2])
+        # print("this is the idx: ", values_idx)
+        # print("this are the values: ", values[:6])
+        serials.append(values[0])
+        dates.append(values[1])
+        test_values.append(values[values_idx])
     
     return test_values, serials, dates
 
