@@ -445,6 +445,7 @@ class MainApplication(tk.Frame):
                 
             set_of_values = []
             sample_count = 0
+            test_limits = []
             for idx, dict in enumerate(get_dicts_only(dicts)):
                 sample_count += 1
                 values = []
@@ -462,18 +463,21 @@ class MainApplication(tk.Frame):
                     else:
                         # print("si hay -----------------------------")
                         values.append(dict[test_name][0])
-                        # test_limits.append(dict[test_name][1])
+                        test_limits.append(dict[test_name][1])
                 
                 serial  = get_serials_only(dicts)[idx]
+                date = get_dates_only(dicts)[idx]
                 # print("this is a serial: ", serial)
                 values.insert(0, serial)
+                values.inset(1, date)
                 set_of_values.append(values)
 
             header_labels = []
             
             test_names.insert(0, "Test names")
             header_labels.append(tuple(test_names))
-            
+            low_limits = []
+            high_limits = []
             if has_limits:
             
                 low_limits = lf.get_limits(dicts)
@@ -503,7 +507,7 @@ class MainApplication(tk.Frame):
 
 
                 
-            self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values)
+            self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
 
 
 
@@ -811,7 +815,7 @@ class MainApplication(tk.Frame):
                                 dict[block.test_name] = [block.children[0].value]
                                 # print("gola")
 
-                    dicts.append([batch.serial, dict])  
+                    dicts.append([[batch.serial, batch.date], dict])  
 
             return dicts
 
@@ -919,7 +923,7 @@ class TabController:
 
         
     
-    def create_tab(self, tab_name, test_names, set_of_values):
+    def create_tab(self, tab_name, test_names, set_of_values, test_limits):
         try:
             self.set_of_values = set_of_values
             self.test_names = test_names
@@ -952,7 +956,11 @@ class TabController:
 
 
             # print("setvals: ", set_of_values)
-            self.my_tn_trees[-1].bind('<Double-1>', lambda event, tn = test_names[1:], sv = list(np.array(set_of_values)[:, 1:]) :self.tree_click_event(tn, sv))
+            self.my_tn_trees[-1].bind('<Double-1>', lambda event,
+                                                            tn = test_names[1:],
+                                                            sv  = set_of_values,
+                                                            limits = test_limits,
+                                                            :self.tree_click_event(tn, sv, limits))
             
             test_names_copy = test_names[:8].copy()
             test_names_copy.append("...")
@@ -980,7 +988,9 @@ class TabController:
 
         
     
-    def tree_click_event(self, tn, sv):
+    def tree_click_event(self, tn, sv, limits):
+        set_of_vals = list(np.array(sv)[:])
+        
         # print("vals : ", sv)
         try:
             item = self.my_tn_trees[self.tab_index].focus()
@@ -989,9 +999,10 @@ class TabController:
             if item != "":
                 info = self.my_tn_trees[self.tab_index].item(item, 'values')
                 test_name = info[0]
-                test_values = get_test_values(tn, sv, test_name)
+                limits = get_test_limits(tn, limits, test_name)
+                test_values, serials, dates = get_test_values(tn, set_of_vals, test_name)
 
-                spc.plot(test_values, test_name)
+                spc.plot(test_values, test_name, limits, serials, dates)
         except Exception as err:
             show_error(err, "show spc error")
 
@@ -1017,14 +1028,21 @@ class TabController:
         self.my_trees = []
         self.my_tn_trees = []
 
-def get_test_limits(test_names, set_of_values, values_test_name):
-    test_limits = []
-    limits_idx = 0
+def get_test_limits(test_names, set_of_values, limits_test_name):
+    try:
+        # print("this are te sv: ", set_of_values)
+        test_limits = []
+        limits_idx = 0
 
-    for idx, test_name in enumerate(test_names):
-        if test_name == values_test_name:
-            limits_idx = idx
-            break
+        for idx, test_name in enumerate(test_names):
+            if test_name == limits_test_name:
+                limits_idx = idx
+                break
+        
+
+        return set_of_values[limits_idx]
+    except Exception as e:
+        show_error(e, "get test limits func error")
     
 
 
@@ -1032,6 +1050,8 @@ def get_test_limits(test_names, set_of_values, values_test_name):
 def get_test_values(test_names, set_of_values, values_test_name):
     values_idx = 0
     test_values = []
+    serials = []
+    dates = []
 
     for idx, test_name in enumerate(test_names):
         if test_name == values_test_name:
@@ -1039,9 +1059,11 @@ def get_test_values(test_names, set_of_values, values_test_name):
             break
 
     for values in set_of_values:
-        test_values.append(values[values_idx])
+        serials.append(values[0][0])
+        dates.append(values[0][1])
+        test_values.append(values[values_idx+2])
     
-    return test_values
+    return test_values, serials, dates
 
 
 
@@ -1056,8 +1078,14 @@ def get_dicts_only(dicts):
 def get_serials_only(dicts):
     serials_only = []
     for d in dicts:
-        serials_only.append(d[0])
+        serials_only.append(d[0][0])
     return serials_only
+
+def get_dates_only(dicts):
+    dates_only = []
+    for d in dicts:
+        dates_only.append(d[0][1])
+    return dates_only
 
 
 def convert_to_dataframe(data, cols):

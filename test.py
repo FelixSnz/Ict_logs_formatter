@@ -1,29 +1,21 @@
-from tkinter import*
-import os, fnmatch
+import matplotlib.pyplot as plt
 
-def submitForm():    
-    strFile = optVariable.get()
-    # Print the selected value from Option (Combo Box)    
-    if (strFile !=''):        
-        print('Selected Value is : ' + strFile)
+def on_pick(event):
+    artist = event.artist
+    xmouse, ymouse = event.mouseevent.xdata, event.mouseevent.ydata
+    x, y = artist.get_xdata(), artist.get_ydata()
+    ind = event.ind
+    print('Artist picked:', event.artist)
+    print ('{} vertices picked'.format(len(ind)))
+    print ('Pick between vertices {} and {}'.format(min(ind), max(ind)+1))
+    print ('x, y of mouse: {:.2f},{:.2f}'.format(xmouse, ymouse))
+    print ('Data point:', x[ind[0]], y[ind[0]])
 
+fig, ax = plt.subplots()
 
-root = Tk()
-root.geometry('500x500')
-root.title("Demo Form ")
+tolerance = 10 # points
+ax.plot(range(10), 'ro-', picker=tolerance)
 
+fig.canvas.callbacks.connect('pick_event', on_pick)
 
-label_2 = Label(root, text="Choose Files ",width=20,font=("bold", 10))
-label_2.place(x=68,y=250)
-
-flist = fnmatch.filter(os.listdir('.'), '*.mp4')
-optVariable = StringVar(root)
-optVariable.set("   Select   ") # default value
-optFiles = OptionMenu(root, optVariable,*flist)
-optFiles.pack()
-optFiles.place(x=240,y=250)
-
-Button(root, text='Submit', command=submitForm, width=20,bg='brown',fg='white').place(x=180,y=380)
-
-
-root.mainloop()
+plt.show()
