@@ -124,7 +124,7 @@ def get_maxs(dicts):
     
     # print(maxims)
 
-    maxims.insert(0, "High Values")
+    maxims.insert(0, "Max Values")
     return maxims
 
 def get_mins(dicts):
@@ -152,7 +152,7 @@ def get_mins(dicts):
     
     # print(len(mins))
 
-    mins.insert(0, "Low Values")
+    mins.insert(0, "Min Values")
     return mins
 
 def get_means(dicts):

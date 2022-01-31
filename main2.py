@@ -287,7 +287,7 @@ class MainApplication(tk.Frame):
 
             try:
                 
-                all_files = [name for name in glob.iglob(logs_path + '**/**', recursive=True) if os.path.isfile(name)]
+                all_files = [name for name in glob.iglob(logs_path + '/**', recursive=True) if os.path.isfile(name)]
             
                 if len(all_files) == 0:
                     raise NotADirectoryError
@@ -301,7 +301,7 @@ class MainApplication(tk.Frame):
             self.status_label.config(text="calculating amount of nests...",  fg='black')
 
 
-            for fname in glob.iglob(logs_path + '**/**', recursive=True):
+            for fname in glob.iglob(logs_path + '/**', recursive=True):
                 counter += 1
 
                 self.update_progress_bar(counter, len(all_files))
@@ -337,7 +337,7 @@ class MainApplication(tk.Frame):
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
 
-            for fname in glob.iglob(logs_path + '**/**', recursive=True):
+            for fname in glob.iglob(logs_path + '/**', recursive=True):
 
                 counter += 1
 
@@ -371,12 +371,14 @@ class MainApplication(tk.Frame):
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
             self.status_label.config(text="Export is enabled!",  fg='black')
+            # print("dd: ", data_dict)
+            
+            if data_dict != {}:
+                if messagebox.askokcancel(message="el formato a sido completado \n¿Desea exportar ahora?", title='Formateo completo'):
+                    self.export_caller(data_dict, sheet_ids)
 
-            if messagebox.askokcancel(message="el formato a sido completado \n¿Desea exportar ahora?", title='Formateo completo'):
-                self.export_caller(data_dict, sheet_ids)
 
-
-            self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
+                self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
             show_error(err, "data extraction error")
         
@@ -384,6 +386,7 @@ class MainApplication(tk.Frame):
     def get_nest_number(self, file_name):
         if '-' in file_name:
             nest_number = file_name.split('-')[:-1]
+            if len(nest_number) < 4:
 
             # if len(nest_number) > 1:
             #     new_nest_number = ''
@@ -394,7 +397,9 @@ class MainApplication(tk.Frame):
 
             # else:
             #     return str(nest_number[0])
-            return nest_number[0]
+                return nest_number[0]
+            else:
+                return 'NA'
                 
         else:
             return 'NA'
@@ -491,27 +496,27 @@ class MainApplication(tk.Frame):
             if has_limits:
             
                 low_limits = lf.get_limits(dicts)
-                low_limits.insert(0, "")
+                low_limits.insert(1, "")
                 header_labels.append(tuple(low_limits))
                 # print("ll len: ", len(low_limits))
             
                 high_limits = lf.get_limits(dicts, False)
-                high_limits.insert(0, "")
+                high_limits.insert(1, "")
                 header_labels.append(tuple(high_limits))
                 # print("hl len: ", len(high_limits))
 
             max_values = lf.get_maxs(dicts)
-            max_values.insert(0, "")
+            max_values.insert(1, "")
             
             header_labels.append(tuple(max_values))
             # print("max len: ", len(max_values))
             min_values = lf.get_mins(dicts)
-            min_values.insert(0, "")
+            min_values.insert(1, "")
             header_labels.append(tuple(min_values))
             # print("min len: ", len(min_values))
 
             mean_values = lf.get_means(dicts)
-            mean_values.insert(0, "")
+            mean_values.insert(1, "")
             header_labels.append(tuple(mean_values))
             # print("mean len: ", len(mean_values))
 
@@ -526,7 +531,7 @@ class MainApplication(tk.Frame):
             self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
 
 
-
+            # print("header:", header_labels)
             return tuple(header_labels), set_of_values
         except Exception as err:
             show_error(err, "excel conversion error")
@@ -889,7 +894,7 @@ class MainApplication(tk.Frame):
 
             self.set_buttons_state("normal")
             
-            self.status_label.config(text="Done!", bg='green', fg='white')
+            self.status_label.config(text="Done!", fg='white')
             if messagebox.askokcancel(message="La exportacion a excel ha terminado \n¿Desea abrir la ubicacion del archivo?", title= "exportacion terminada"):
                 explore(file.name)
             self.pb1.config(mode="determinate")
@@ -900,6 +905,9 @@ class MainApplication(tk.Frame):
         self.export_btn["state"] = state
         self.convert_btn["state"] = state
         self.browse_btn["state"] = state
+        self.to_time_btn["state"] = state
+        self.from_time_btn["state"] = state
+        self.check_btn_showerror["state"] = state
 
     def on_closing(self):
 
@@ -951,8 +959,10 @@ class TabController:
 
         
     
-    def create_tab(self, tab_name, test_names, set_of_values, test_limits):
+    def create_tab(self, tab_name, test_names:list, set_of_values, test_limits):
         try:
+            test_names[0] = "Serials"
+            test_names[1] = "Dates"
             self.set_of_values = set_of_values
             self.test_names = test_names
             temp_tab = tk.ttk.Frame(self.notebook)
