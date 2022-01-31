@@ -66,7 +66,11 @@ def on_pick(event, root):
     print("serial: ", serials[int(round(x_))])
     print("date: ", dates[int(round(x_))])
 
-    a = NewWindow(root, serials[int(round(x_))], dates[int(round(x_))])
+    tk.messagebox.showinfo(message="serial: " + serials[int(round(x_))] + "\n" +
+                                   "Date: " + str(dates[int(round(x_))]),
+                                   title="Mesurement info")
+
+    # a = NewWindow(root, serials[int(round(x_))], dates[int(round(x_))])
 
     # print('Artist picked:', event.artist)
     # print ('{} vertices picked'.format(len(ind)))

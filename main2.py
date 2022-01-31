@@ -1,11 +1,14 @@
 
 
+from tkinter import messagebox
+from tkinter.messagebox import NO
 from turtle import bgcolor, width
 from anytree.node.node import Node
 from anytree import RenderTree
 import tkinter as tk
 from tkinter import tix
 import sys, os
+from matplotlib.pyplot import text
 from tkcalendar import DateEntry
 from datetime import datetime
 import dft
@@ -52,6 +55,9 @@ class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
         self.root = root
+
+        root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
         icon = iconb64.ICON
 
         icondata= base64.b64decode(icon)
@@ -72,23 +78,9 @@ class MainApplication(tk.Frame):
         root.title('Logs to excel converter')
         root.configure(background='gray94')
         self.upper_top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
-        self.export_btn = tk.Button(self.upper_top_frame, text='Export to excel')
-        self.export_btn.pack(side=tk.RIGHT)
-        self.export_btn["state"] = "disabled"
-        exprt_btn_hover_msg = tix.Balloon(root)
-        exprt_btn_hover_msg.bind_widget(self.export_btn, 
-        balloonmsg="click to start the conversion export process to excel format")
+        
 
-        for sub in exprt_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
 
-        self.opn_excel_loc = tk.Button(self.upper_top_frame, text='Open excel location')
-        opnexc_btn_hover_msg = tix.Balloon(root)
-        opnexc_btn_hover_msg.bind_widget(self.opn_excel_loc, 
-        balloonmsg="click to open the file explorer in the path of your recent exported excel file")
-
-        for sub in opnexc_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
 
         self.can_show_fails = tk.IntVar()
         self.check_btn_showerror = tk.Checkbutton(self.upper_top_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
@@ -194,7 +186,20 @@ class MainApplication(tk.Frame):
 
         
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
+        
         self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
+        self.export_btn = tk.Button(self.bottom_frame2, text='Export to excel')
+        self.export_btn.pack(side=tk.RIGHT)
+        self.export_btn["state"] = "disabled"
+        exprt_btn_hover_msg = tix.Balloon(root)
+        exprt_btn_hover_msg.bind_widget(self.export_btn, 
+        balloonmsg="click to start the conversion export process to excel format")
+
+        for sub in exprt_btn_hover_msg.subwidgets_all():
+            sub.config(bg='grey')
+
+
+
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
         self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.progress_bar_label = tk.Label(self.bottom_frame, text='0%', bg='gray94')
@@ -294,8 +299,7 @@ class MainApplication(tk.Frame):
 
             self.pb1.config(mode="determinate")
             self.status_label.config(text="calculating amount of nests...",  fg='black')
-            
-            self.opn_excel_loc.forget()
+
 
             for fname in glob.iglob(logs_path + '**/**', recursive=True):
                 counter += 1
@@ -367,6 +371,10 @@ class MainApplication(tk.Frame):
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
             self.status_label.config(text="Export is enabled!",  fg='black')
+
+            if messagebox.askokcancel(message="el formato a sido completado \n¿Desea exportar ahora?", title='Formateo completo'):
+                self.export_caller(data_dict, sheet_ids)
+
 
             self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
@@ -840,7 +848,6 @@ class MainApplication(tk.Frame):
             global amount_of_nests
             self.status_label.config(text=" ", bg='gray94',  fg='black')
             self.set_buttons_state("disabled")
-            self.opn_excel_loc.forget()
             counter = 0
             dfs = []
 
@@ -883,8 +890,8 @@ class MainApplication(tk.Frame):
             self.set_buttons_state("normal")
             
             self.status_label.config(text="Done!", bg='green', fg='white')
-            self.opn_excel_loc.config(command=lambda:explore(file.name))
-            self.opn_excel_loc.pack(side=tk.LEFT)
+            if messagebox.askokcancel(message="La exportacion a excel ha terminado \n¿Desea abrir la ubicacion del archivo?", title= "exportacion terminada"):
+                explore(file.name)
             self.pb1.config(mode="determinate")
         except Exception as err:
             show_error(err, "export error")
@@ -894,6 +901,14 @@ class MainApplication(tk.Frame):
         self.convert_btn["state"] = state
         self.browse_btn["state"] = state
 
+    def on_closing(self):
+
+        thread_pool_executor.shutdown()
+
+        self.quit()
+        self.destroy()
+
+
             
     
 
@@ -902,7 +917,10 @@ def show_error(e, tittle_error):
         error = "     error: {0} \n \
     error type: {1} \n \
     in line: {2}".format(e, exc_type, exc_tb.tb_lineno)
-        tk.messagebox.showerror(tittle_error, error)  
+        tk.messagebox.showerror(tittle_error, error)
+
+
+
 
 
 class TabController:
@@ -927,6 +945,8 @@ class TabController:
             show_error(err, "tab error")
 
         #Frames
+    
+
     
 
         
@@ -1039,6 +1059,25 @@ class TabController:
         self.my_trees = []
         self.my_tn_trees = []
 
+    
+
+class NewWindow(tk.Toplevel):
+
+     
+    def __init__(self, master = None, case = None, data = None, ids = None):
+
+        super().__init__(master = master)
+        self.title("New Window")
+        self.geometry("700x500")
+
+
+        if case == "export available":
+            export_btn = tk.Button(self, text = "Export Now", bg='green')
+            export_btn.config(command=lambda : master.export_caller(data, ids))
+            export_btn.pack()
+    
+
+
 def get_test_limits(test_names, set_of_values, limits_test_name):
     try:
         # print("this are te sv: ", set_of_values)
@@ -1128,11 +1167,13 @@ def explore(path):
         subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
 
 if __name__ == "__main__":
+
     root = tix.Tk()
     
     main = MainApplication(root)
     root.mainloop()
-    
+
+        
 
 
 
