@@ -1,3 +1,4 @@
+from cProfile import label
 import tkinter as tk 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
 NavigationToolbar2Tk)
@@ -13,7 +14,6 @@ import statistics
 # tkinter window
 def plot(x, t_name):
 
-    print("x:", x)
 
     x = np.array(x).astype(np.float)
     x_bar = x
@@ -22,15 +22,19 @@ def plot(x, t_name):
     r = [x.max()- x.min()] 
 
     # Plot x-bar and R charts
-    fig, axs = plt.subplots(1, figsize=(12,12))
+    fig, axs = plt.subplots(1, figsize=(8,3.5))
 
     # x-bar chart
     axs.plot(x_bar, linestyle='-', marker='o', color='black')
-    axs.axhline((statistics.mean(x_bar)+0.577*statistics.mean(r)), color='red', linestyle='dashed')
+    axs.axhline((statistics.mean(x_bar)+0.577*statistics.mean(r)), color='red', linestyle='dashed', label="Control Limits")
     axs.axhline((statistics.mean(x_bar)-0.577*statistics.mean(r)), color='red', linestyle='dashed')
-    axs.axhline((statistics.mean(x_bar)), color='blue')
+    axs.axhline((statistics.mean(x_bar)), color='blue', label='mean')
     axs.set_title(t_name + ' Chart')
-    axs.set(xlabel='Samples', ylabel='Measures')
+    axs.set(xlabel='Samples', ylabel='Measurements')
+
+    fig.legend(loc=7)
+    fig.tight_layout()
+    fig.subplots_adjust(right=0.8)   
 
 
 
@@ -49,7 +53,7 @@ def plot(x, t_name):
 
     plt_root = tk.Tk()
     plt_root.title('SPC')
-    plt_root.geometry('620x410')
+    plt_root.geometry('780x410')
 
 
   

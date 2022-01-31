@@ -21,6 +21,7 @@ import os
 import re
 import numpy as np
 import re
+import base64
 
 from tkinter import filedialog
 
@@ -35,6 +36,8 @@ import subprocess
 import tkinter as tk
 from tktimepicker import SpinTimePickerModern
 from tktimepicker import constants
+
+import iconb64
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 logs_path = str(" ")
@@ -48,12 +51,25 @@ nest_numbers = []
 class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
-
         self.root = root
+        icon = iconb64.ICON
+
+        icondata= base64.b64decode(icon)
+        # print(icon)
+        ## The temp file is icon.ico
+        tempFile= "icon.ico"
+        iconfile= open(tempFile,"wb")
+        ## Extract the icon
+        iconfile.write(icondata)
+        iconfile.close()
+        self.root.iconbitmap(tempFile)
+        ## Delete the tempfile
+        os.remove(tempFile)
+
+        
         self.preview_table = None
-        root.geometry('640x220')
+        root.geometry('840x520')
         root.title('Logs to excel converter')
-        root.iconbitmap("kimball.ico")
         root.configure(background='gray94')
         self.upper_top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.export_btn = tk.Button(self.upper_top_frame, text='Export to excel')
@@ -137,6 +153,14 @@ class MainApplication(tk.Frame):
         self.from_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
         self.from_time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.set_time(self.from_time_lbl))
+
+        ftime_btn_ballon = tix.Balloon(root)
+        ftime_btn_ballon.bind_widget(self.from_time_btn, 
+        balloonmsg="click to set the 'from time' in 12h format")
+
+        for sub in ftime_btn_ballon.subwidgets_all():
+            sub.config(bg='grey')
+
         self.from_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_up.pack(fill=tk.BOTH)
 
@@ -152,6 +176,14 @@ class MainApplication(tk.Frame):
         self.to_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
         self.to_time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.set_time(self.to_time_lbl))
+
+        totime_btn_ballon = tix.Balloon(root)
+        totime_btn_ballon.bind_widget(self.to_time_btn, 
+        balloonmsg="click to set the 'to time' in 12h format")
+
+        for sub in totime_btn_ballon.subwidgets_all():
+            sub.config(bg='grey')
+
         self.to_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_down.pack(fill=tk.BOTH)
 
@@ -159,6 +191,8 @@ class MainApplication(tk.Frame):
         
         self.middle_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.tab_controller = TabController(self.middle_frame)
+
+        
         self.bottom_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.bottom_frame2 = tk.Frame(root, bg='gray94', highlightthickness=2)
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
@@ -232,10 +266,12 @@ class MainApplication(tk.Frame):
     #main function for all the process that leaves ready the log data for exporting into an excel file
     def log_to_excel_process(self):
         try:
+            self.tab_controller.destroy_tabs()
             self.status_label.config(text=" ", bg='gray94',  fg='black')
             if self.preview_table != None:
                 self.preview_table.destroy()
                 self.table_tittle.destroy()
+                
             self.set_buttons_state("disabled")
             global dicts_counter
             dicts_counter = 0
@@ -385,6 +421,7 @@ class MainApplication(tk.Frame):
             counter = 0
 
             test_names = []
+            # test_limits = []
 
             total_iterations = len(max(get_dicts_only(dicts), key=len).keys()) * len(get_dicts_only(dicts)) * 2
             self.pb1.config(mode="determinate")
@@ -394,14 +431,17 @@ class MainApplication(tk.Frame):
                 for test_name in dict.keys():
 
                     counter += 1
-                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+                    left_pbs_str = ' | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
 
                     self.update_progress_bar(counter, total_iterations, left_pbs_str)
 
                     if not test_name in test_names:
                         test_names.append(test_name)
+
             
             # total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) + len(get_dicts_only(dicts)) *len(test_names)
+
+
                 
             set_of_values = []
             sample_count = 0
@@ -412,7 +452,7 @@ class MainApplication(tk.Frame):
 
                     counter +=1
 
-                    left_pbs_str = '| ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
+                    left_pbs_str = ' | ('+ str(dicts_counter+1)+"/" + str(amount_of_nests)+")"
 
                     self.update_progress_bar(counter, total_iterations, left_pbs_str)
 
@@ -422,6 +462,7 @@ class MainApplication(tk.Frame):
                     else:
                         # print("si hay -----------------------------")
                         values.append(dict[test_name][0])
+                        # test_limits.append(dict[test_name][1])
                 
                 serial  = get_serials_only(dicts)[idx]
                 # print("this is a serial: ", serial)
@@ -460,13 +501,11 @@ class MainApplication(tk.Frame):
 
             dicts_counter += 1
 
-            try:
 
                 
-                self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values)
+            self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values)
 
-            except Exception as err:
-                show_error(err, "there was an error")
+
 
             return tuple(header_labels), set_of_values
         except Exception as err:
@@ -545,6 +584,8 @@ class MainApplication(tk.Frame):
                     pass
                 elif line[1:5] == 'TJET':
                     pass
+                elif line[1:4] == 'D-T':
+                    pass
                 else:
 
                     new_data.append(line)
@@ -614,22 +655,22 @@ class MainApplication(tk.Frame):
 
                         #this loop passes data without mesurments and keeps foreward data with mesurements
 
-                        if not self.can_show_fails.get():
-                            new_sub_dataset = []
-                            for sub_data in new_data[idx+1:]:
-                                if len(sub_data) > 1:
-                                    name = sub_data[1:sub_data.index("|")]
-                                    ind_data = sub_data.split('|')
+                        # if not self.can_show_fails.get():
+                        new_sub_dataset = []
+                        for sub_data in new_data[idx+1:]:
+                            if len(sub_data) > 1:
+                                name = sub_data[1:sub_data.index("|")]
+                                ind_data = sub_data.split('|')
 
-                                    if len(ind_data) > 2:
-                                        if "@A" in ind_data[2]:
-                                            if name.startswith("@"):
-                                                sub_data = sub_data[1:]
-                                            else:
-                                                pass
-                                            new_sub_dataset.append(sub_data)
+                                if len(ind_data) > 2:
+                                    if "@A" in ind_data[2]:
+                                        if name.startswith("@"):
+                                            sub_data = sub_data[1:]
+                                        else:
+                                            pass
+                                        new_sub_dataset.append(sub_data)
 
-                            new_data = new_sub_dataset
+                        new_data = new_sub_dataset
 
                         for sub_data in new_data:
 
@@ -820,7 +861,7 @@ class MainApplication(tk.Frame):
                     counter += 1
                     
                     nest_id = ids[idx]
-                    if not nest_id is string:
+                    if not str(nest_id) == str:
                         nest_id = str(nest_id)
 
                     df.to_excel(writer, sheet_name='Nido '+ nest_id )
@@ -887,46 +928,51 @@ class TabController:
             self.temp_tabs.append(temp_tab)
 
             self.notebook.add(temp_tab, text=tab_name)
+
             tree_scroll = tk.Scrollbar(temp_tab)
-            tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
             
-            self.my_tn_tree = tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set)
             self.my_tn_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set))
             self.my_tn_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
+            tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
+            tree_scroll.config(command=self.my_tn_trees[-1].yview)
             self.my_tn_trees[-1]["columns"] = ['Test names']
             self.my_tn_trees[-1]['show'] = 'headings'
             self.my_tn_trees[-1].column('Test names' ,anchor=tk.CENTER, width=190)
             self.my_tn_trees[-1].heading('Test names',text='Test names')
 
             for idx, test_name in enumerate(test_names[1:]):
-                self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='', values=test_name) 
+                self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='', values=test_name)
 
+            tn_tree_ballon = tix.Balloon(root)
+            tn_tree_ballon.bind_widget(self.my_tn_trees[-1], 
+            balloonmsg="double click a test name to see its SPC analisis chart")
+
+            for sub in tn_tree_ballon.subwidgets_all():
+                sub.config(bg='grey')
+
+
+            # print("setvals: ", set_of_values)
             self.my_tn_trees[-1].bind('<Double-1>', lambda event, tn = test_names[1:], sv = list(np.array(set_of_values)[:, 1:]) :self.tree_click_event(tn, sv))
-
-            test_names = test_names[:9].copy()
-            test_names.append("...")
-            self.my_tree = tk.ttk.Treeview(temp_tab)
+            
+            test_names_copy = test_names[:8].copy()
+            test_names_copy.append("...")
             self.my_trees.append(tk.ttk.Treeview(temp_tab))
             self.my_trees[-1]
             self.my_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
-            tree_scroll.config(command=self.my_tn_trees[-1].yview)
 
-
-            self.my_trees[-1]["columns"] = test_names
+            self.my_trees[-1]["columns"] = test_names_copy
             self.my_trees[-1]['show'] = 'headings'
 
 
-            for idx, test_name in enumerate(test_names):
+            for idx, test_name in enumerate(test_names_copy):
                 self.my_trees[-1].column(test_name ,anchor=tk.CENTER, width=190)
                 self.my_trees[-1].heading(test_name,text=test_name)
 
             
-            for idx, vals in enumerate(np.array(set_of_values)[:10,:9]):
+            for idx, vals in enumerate(np.array(set_of_values)[:10,:8]):
                 new_vals = list(vals)
                 new_vals.append("...")
                 self.my_trees[-1].insert(parent='',index='end',iid=idx,text='', values=new_vals) 
-            
-
             
         except Exception as err:
             show_error(err, "tab creation error")
@@ -935,19 +981,17 @@ class TabController:
         
     
     def tree_click_event(self, tn, sv):
+        # print("vals : ", sv)
         try:
-
             item = self.my_tn_trees[self.tab_index].focus()
-            print(item)
-            info = self.my_tn_trees[self.tab_index].item(item, 'values')
-            test_name = info[0]
-            print("info: ", info)
-            print("test name: ", test_name)
-            # test_values = 
-            print()
-            test_values = get_test_values(tn, sv, test_name)
-            print(test_values)
-            spc.plot(test_values, test_name)
+            # print("this is the item: ", item)
+            # print("this is the item: ", item)
+            if item != "":
+                info = self.my_tn_trees[self.tab_index].item(item, 'values')
+                test_name = info[0]
+                test_values = get_test_values(tn, sv, test_name)
+
+                spc.plot(test_values, test_name)
         except Exception as err:
             show_error(err, "show spc error")
 
@@ -965,31 +1009,37 @@ class TabController:
     def destroy_tabs(self):
         for tab in self.temp_tabs:
             tab.destroy()
-        
+        self.temp_tabs = []
         for tree in self.my_trees:
             tree.destroy()
-
+        for tree in self.my_tn_trees:
+            tree.destroy()
         self.my_trees = []
-        self.temp_tabs = []
+        self.my_tn_trees = []
+
+def get_test_limits(test_names, set_of_values, values_test_name):
+    test_limits = []
+    limits_idx = 0
+
+    for idx, test_name in enumerate(test_names):
+        if test_name == values_test_name:
+            limits_idx = idx
+            break
+    
+
 
 
 def get_test_values(test_names, set_of_values, values_test_name):
     values_idx = 0
     test_values = []
-    print("test names : ", test_names  )
-    
+
     for idx, test_name in enumerate(test_names):
         if test_name == values_test_name:
             values_idx = idx
-            print("index at find: ", idx)
             break
-    
-    print("idx: ", values_idx)
-    
+
     for values in set_of_values:
         test_values.append(values[values_idx])
-    
-
     
     return test_values
 
@@ -1010,30 +1060,16 @@ def get_serials_only(dicts):
     return serials_only
 
 
-
-        
-
-
-
-
-
-
-
-
-
 def convert_to_dataframe(data, cols):
-    #de todos los elementos de la lista que se pasa al argumento 'columns' cada elemento es una lista, de la cual en algunos casos se omite el ultimo valor 
-    #agregando un [:-1]
-    # print("cols: ", cols)
+
     new_cols = []
 
     for col in cols:
         new_cols.append(list(col))
-        
-    # print("sort cols: ", new_cols)
+
     df = pd.DataFrame(data, columns = new_cols)
     df.index = np.arange(1, len(df)+1)
-    # print("this is df: \n", df)
+
     return df
 
 
