@@ -1,5 +1,6 @@
 
 
+from posixpath import split
 from tkinter import messagebox
 from tkinter.messagebox import NO
 from turtle import bgcolor, width
@@ -51,6 +52,8 @@ thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 has_limits = True
 nest_numbers = []
 
+# M:/Public/Luis Dominguez/64002696_p/GR&R/1
+
 class MainApplication(tk.Frame):
     def __init__(self, root, *args, **kwargs):
         tk.Frame.__init__(self, root, *args, **kwargs)
@@ -85,6 +88,11 @@ class MainApplication(tk.Frame):
         self.can_show_fails = tk.IntVar()
         self.check_btn_showerror = tk.Checkbutton(self.upper_top_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
         self.check_btn_showerror.pack(side=tk.RIGHT)
+
+        self.can_show_dups = tk.IntVar()
+        self.check_btn_showdups = tk.Checkbutton(self.upper_top_frame, text = "Show duplicate serials?", variable = self.can_show_dups, onvalue = 1, offvalue = 0)
+        self.check_btn_showdups.pack(side=tk.RIGHT)
+
         check_btn_hover_msg = tix.Balloon(root)
         check_btn_hover_msg.bind_widget(self.check_btn_showerror, 
         balloonmsg="check or not before the conversion process")
@@ -271,6 +279,9 @@ class MainApplication(tk.Frame):
     #main function for all the process that leaves ready the log data for exporting into an excel file
     def log_to_excel_process(self):
         try:
+            print("about to destroy tabs")
+            global nest_numbers
+            nest_numbers = []
             self.tab_controller.destroy_tabs()
             self.status_label.config(text=" ", bg='gray94',  fg='black')
             if self.preview_table != None:
@@ -284,7 +295,7 @@ class MainApplication(tk.Frame):
             set_of_trees = {}
 
             counter = 0
-
+            
             try:
                 
                 all_files = [name for name in glob.iglob(logs_path + '/**', recursive=True) if os.path.isfile(name)]
@@ -358,16 +369,21 @@ class MainApplication(tk.Frame):
                         num_lines = sum(1 for line in open(fname))
                         if tree != None:
                             if self.can_show_fails.get():
-                                set_of_trees[nest_number].append(tree)
-                            else:
-                                if num_lines > 30:
+                                if self.can_show_dups.get():
+                                    set_of_trees[nest_number].append(tree)
+                                elif not self.has_serial(set_of_trees[nest_number], tree):
+                                    set_of_trees[nest_number].append(tree)
+                            elif num_lines > 35:
+                                if self.can_show_dups.get():
+                                    set_of_trees[nest_number].append(tree)
+                                elif not self.has_serial(set_of_trees[nest_number], tree):
                                     set_of_trees[nest_number].append(tree)
                         else:
-                            print("?")
+                            print("empty/none tree")
 
             data_dict, sheet_ids = self.trees_to_excel_data(set_of_trees)
             self.set_buttons_state("normal")
-            root.update_idletasks()
+            self.root.update_idletasks()
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
             self.status_label.config(text="Export is enabled!",  fg='black')
@@ -381,6 +397,20 @@ class MainApplication(tk.Frame):
                 self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
             show_error(err, "data extraction error")
+
+    
+    def has_serial(self, trees, tree):
+        print("hola")
+        for master_tree in trees:
+            for master_batch in master_tree.children:
+                for batch in tree.children:
+
+                    print("master serial: ", master_batch.serial)
+                    print("serial: ", batch.serial)
+                    if master_batch.serial == batch.serial:
+                        return True
+        return False
+
         
     #returns the nest number given a log file name
     def get_nest_number(self, file_name):
@@ -527,7 +557,7 @@ class MainApplication(tk.Frame):
             dicts_counter += 1
 
 
-                
+            # print("this are the nest number: ", nest_numbers)
             self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
 
 
@@ -630,40 +660,54 @@ class MainApplication(tk.Frame):
                             name = name[1:]
 
                         separated_batch_data = data.split("|")
+                        sep_by_newline = data.split("\n")
+
+                        while '' in sep_by_newline:
+                            sep_by_newline.remove('')
+                        date_container = sep_by_newline[-1].split("|")
+                        # print("newlines: ", sep_by_newline)
+                        # print("date container: ", date_container)
 
                         # print("separated data: ", separated_batch_data)
 
-                        raw_date = separated_batch_data[7]
-                        year = int("20"+raw_date[0:2])
-                        month = int(raw_date[2:4])
-                        day = int(raw_date[4:6])
-                        hour = int(raw_date[6:8])
-                        min = int(raw_date[8:10])
-                        seg = int(raw_date[10:12])
+                        raw_date = date_container[3]
 
-                        date_ = datetime(year, month, day, hour, min, seg)
+                        # print("raw_date: ", raw_date)
 
-                        date_vals = str(self.from_cal.get_date()).split("-")
-                        time_vals = self.to_24h_format(self.from_time_lbl['text'])
-                        for val in time_vals:
-                            date_vals.append(val[:2])
+                        if len(raw_date) == 12:
+                            year = int("20"+raw_date[0:2])
+                            month = int(raw_date[2:4])
+                            day = int(raw_date[4:6])
+                            hour = int(raw_date[6:8])
+                            min = int(raw_date[8:10])
+                            seg = int(raw_date[10:12])
 
-                        from_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
-                        # print("from date: ", from_date)
-                        # print(date_)
+                            date_ = datetime(year, month, day, hour, min, seg)
 
-                        date_vals = str(self.to_cal.get_date()).split("-")
-                        time_vals = self.to_24h_format(self.to_time_lbl['text'])
-                        for val in time_vals:
-                            date_vals.append(val[:2])
-                        to_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
-                        # print("from date: ", to_date)
-                        # print(date_vals)
+                            date_vals = str(self.from_cal.get_date()).split("-")
+                            time_vals = self.to_24h_format(self.from_time_lbl['text'])
+                            for val in time_vals:
+                                date_vals.append(val[:2])
 
-                        if not dft.is_in_date_range(from_date, date_, to_date):
+                            from_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
+                            # print("from date: ", from_date)
+                            # print(date_)
 
-                            return None
+                            date_vals = str(self.to_cal.get_date()).split("-")
+                            time_vals = self.to_24h_format(self.to_time_lbl['text'])
+                            for val in time_vals:
+                                date_vals.append(val[:2])
+                            to_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
+                            # print("from date: ", to_date)
+                            # print(date_vals)
 
+                            if not dft.is_in_date_range(from_date, date_, to_date):
+
+                                return None
+
+                        else:
+
+                            date_ = "N/A"
 
                         if len(separated_batch_data) >= 16:
 
@@ -1050,6 +1094,7 @@ class TabController:
         
 
     def tab_changued(self, event):
+        print("tab changued event")
         try:
             if len(self.temp_tabs) > 0:
                 self.tab_index = self.notebook.index(self.notebook.select())

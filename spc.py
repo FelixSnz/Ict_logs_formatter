@@ -1,4 +1,4 @@
-from cProfile import label
+
 import tkinter as tk
 from turtle import bgcolor, color, width 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
@@ -6,8 +6,10 @@ NavigationToolbar2Tk)
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import statistics
 import sys
+from matplotlib.patches import Patch
 
 values = []
 serials = []
@@ -41,11 +43,8 @@ def show_error(e, tittle_error):
         tk.messagebox.showerror(tittle_error, error)
 
 
-def on_pick(event, root):
+def on_pick(event, values, serials, dates):
 
-    global values
-    global serials
-    global dates
 
     values, size = sorted(values), len(values)
     y = event.ydata
@@ -99,18 +98,12 @@ def plot(x, t_name, limits, s, d):
 
         x = np.array(x).astype(np.float)
         x_bar = x
-        global values
-        global serials
-        global dates
-        values = x_bar
-        serials = s
-        dates = d
 
         # Define list variable for groups ranges
         r = [x.max()- x.min()] 
 
         # Plot x-bar and R charts
-        fig, axs = plt.subplots(1, figsize=(8,3.5))
+        fig, axs = plt.subplots(1, figsize=(15,4.5))
         
         low_limit = np.array(low_limit).astype(float)
         high_limit = np.array(high_limit).astype(float)
@@ -119,17 +112,29 @@ def plot(x, t_name, limits, s, d):
 
         # x-bar chart
         axs.plot(x_bar, linestyle='-', marker='o', color='black')
+        ll_line:Line2D = axs.axhline(low_limit, color = 'orange', linestyle = 'dashed', label = 'Test Limits')
+        hl_line:Line2D = axs.axhline(high_limit, color = 'orange', linestyle = 'dashed')
         axs.axhline((statistics.mean(x_bar)+0.577*statistics.mean(r)), color='yellow', linestyle='dashed', label="Control Limits")
         axs.axhline((statistics.mean(x_bar)-0.577*statistics.mean(r)), color='yellow', linestyle='dashed')
-        axs.axhline(low_limit, color = 'orange', linestyle = 'dashed', label = 'Test Limits')
-        axs.axhline(high_limit, color = 'orange', linestyle = 'dashed')
-        axs.axhline((statistics.mean(x_bar)), color='blue', label='mean')
+        axs.axhline((statistics.mean(x_bar)), color='green', label='mean')
         axs.set_title(t_name + ' Chart')
         axs.set(xlabel='Samples', ylabel='Measurements')
 
-        fig.legend(loc=7)
+        leg1 = fig.legend(loc=7)
+
+        ll_line.set_label("Low Limit: " + str(low_limit))
+
+        hl_line.set_label("High Limit: " + str(high_limit))
+
+        legend_elements = [hl_line, ll_line]
+
+
+        leg2 = fig.legend(handles=legend_elements, loc="center", bbox_to_anchor=(0.91, 0.8))
+        # axs.legend(handles=legend_elements, loc="upper left", bbox_to_anchor=(1.02, 1))
+        # axs.legend(["High Limit" + str(high_limit), "Low Limit" + str(low_limit)], loc=5, mar)
+
         fig.tight_layout()
-        fig.subplots_adjust(right=0.8)   
+        fig.subplots_adjust(right=0.85)   
 
 
 
@@ -148,9 +153,9 @@ def plot(x, t_name, limits, s, d):
 
         plt_root = tk.Tk()
         plt_root.title('SPC')
-        plt_root.geometry('780x410')
+        plt_root.geometry('1200x500')
 
-        fig.canvas.callbacks.connect('button_press_event', lambda e, rot = plt_root:on_pick(e, rot))
+        fig.canvas.callbacks.connect('button_press_event', lambda e, serial = s, date = d, x = x_bar:on_pick(e, x, serial, date))
 
 
     
