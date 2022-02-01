@@ -84,17 +84,23 @@ class MainApplication(tk.Frame):
         
 
 
-
-        self.can_show_fails = tk.IntVar()
-        self.check_btn_showerror = tk.Checkbutton(self.upper_top_frame, text = "Show failed logs?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
-        self.check_btn_showerror.pack(side=tk.RIGHT)
+        # ------------- check button filters --------------------------
+        self.can_show_empties = tk.IntVar()
+        self.check_btn_showempties = tk.Checkbutton(self.upper_top_frame, text = "Show empty logs?", variable = self.can_show_empties, onvalue = 1, offvalue = 0)
+        self.check_btn_showempties.pack(side=tk.RIGHT)
 
         self.can_show_dups = tk.IntVar()
         self.check_btn_showdups = tk.Checkbutton(self.upper_top_frame, text = "Show duplicate serials?", variable = self.can_show_dups, onvalue = 1, offvalue = 0)
         self.check_btn_showdups.pack(side=tk.RIGHT)
 
+        self.can_show_fails = tk.IntVar()
+        self.check_btn_showfails = tk.Checkbutton(self.upper_top_frame, text = "Show failed tests?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
+        self.check_btn_showfails.pack(side=tk.RIGHT)
+
+        # ----------------------- END ---------------------------------
+
         check_btn_hover_msg = tix.Balloon(root)
-        check_btn_hover_msg.bind_widget(self.check_btn_showerror, 
+        check_btn_hover_msg.bind_widget(self.check_btn_showempties, 
         balloonmsg="check or not before the conversion process")
 
         for sub in check_btn_hover_msg.subwidgets_all():
@@ -336,7 +342,7 @@ class MainApplication(tk.Frame):
 
                             if not nest_number in set_of_trees:
 
-                                if self.can_show_fails.get():
+                                if self.can_show_empties.get():
                                     set_of_trees[nest_number] = []
                                     nest_numbers.append(nest_number)
                                 else:
@@ -368,7 +374,7 @@ class MainApplication(tk.Frame):
 
                         num_lines = sum(1 for line in open(fname))
                         if tree != None:
-                            if self.can_show_fails.get():
+                            if self.can_show_empties.get():
                                 if self.can_show_dups.get():
                                     set_of_trees[nest_number].append(tree)
                                 elif not self.has_serial(set_of_trees[nest_number], tree):
@@ -400,13 +406,9 @@ class MainApplication(tk.Frame):
 
     
     def has_serial(self, trees, tree):
-        print("hola")
         for master_tree in trees:
             for master_batch in master_tree.children:
                 for batch in tree.children:
-
-                    print("master serial: ", master_batch.serial)
-                    print("serial: ", batch.serial)
                     if master_batch.serial == batch.serial:
                         return True
         return False
@@ -516,10 +518,45 @@ class MainApplication(tk.Frame):
                 values.insert(0, serial)
                 values.insert(1, date)
                 set_of_values.append(values)
+                
 
-            header_labels = []
+            
             test_names.insert(0, "")
             test_names.insert(0, "Test names")
+            
+            err_index = len(test_names)
+
+            if not self.can_show_fails.get():
+                err_idxs = []
+                
+                for values in set_of_values:
+
+                    
+                    values = list(values)
+                    
+
+                    if not values.count("NONE") == len(values) - 2:
+                        if "NONE" in values:
+                            err_idxs.append(values.index("NONE"))
+                
+                err_index = min(err_idxs)
+                new_set_of_values = []
+                for values in set_of_values:
+                    new_set_of_values.append(values[:err_index])
+                    # print("len of new vals: ", len(values[:err_index]))
+                
+                set_of_values = new_set_of_values
+                test_names = test_names[:err_index]
+                # print("len of new tests_names: ", len(test_names))
+            
+            for values in set_of_values:
+                print("vals len: ", len(values))
+            print("tn len: ", len(test_names))
+                 
+
+
+            header_labels = []
+
             header_labels.append(tuple(test_names))
             low_limits = []
             high_limits = []
@@ -527,27 +564,30 @@ class MainApplication(tk.Frame):
             
                 low_limits = lf.get_limits(dicts)
                 low_limits.insert(1, "")
-                header_labels.append(tuple(low_limits))
+                header_labels.append(tuple(low_limits[:err_index]))
+
+                print("ll no err idx: ", len(low_limits))
+                print("whit err idx: ", len(low_limits[:err_index]))
                 # print("ll len: ", len(low_limits))
             
                 high_limits = lf.get_limits(dicts, False)
                 high_limits.insert(1, "")
-                header_labels.append(tuple(high_limits))
+                header_labels.append(tuple(high_limits[:err_index]))
                 # print("hl len: ", len(high_limits))
 
             max_values = lf.get_maxs(dicts)
             max_values.insert(1, "")
             
-            header_labels.append(tuple(max_values))
+            header_labels.append(tuple(max_values[:err_index]))
             # print("max len: ", len(max_values))
             min_values = lf.get_mins(dicts)
             min_values.insert(1, "")
-            header_labels.append(tuple(min_values))
+            header_labels.append(tuple(min_values[:err_index]))
             # print("min len: ", len(min_values))
 
             mean_values = lf.get_means(dicts)
             mean_values.insert(1, "")
-            header_labels.append(tuple(mean_values))
+            header_labels.append(tuple(mean_values[:err_index]))
             # print("mean len: ", len(mean_values))
 
             
@@ -724,7 +764,7 @@ class MainApplication(tk.Frame):
 
                         #this loop passes data without mesurments and keeps foreward data with mesurements
 
-                        # if not self.can_show_fails.get():
+                        # if not self.can_show_empties.get():
                         new_sub_dataset = []
                         for sub_data in new_data[idx+1:]:
                             if len(sub_data) > 1:
@@ -951,7 +991,8 @@ class MainApplication(tk.Frame):
         self.browse_btn["state"] = state
         self.to_time_btn["state"] = state
         self.from_time_btn["state"] = state
-        self.check_btn_showerror["state"] = state
+        self.check_btn_showempties["state"] = state
+        self.check_btn_showdups["state"] = state
 
     def on_closing(self):
 
@@ -1200,16 +1241,22 @@ def get_dates_only(dicts):
 
 
 def convert_to_dataframe(data, cols):
+    try:
 
-    new_cols = []
+        new_cols = []
 
-    for col in cols:
-        new_cols.append(list(col))
+        for col in cols:
+            new_cols.append(list(col))
+            # print(str(len(col))+": ", col)
 
-    df = pd.DataFrame(data, columns = new_cols)
-    df.index = np.arange(1, len(df)+1)
+        # print("Data: ", data)
 
-    return df
+        df = pd.DataFrame(data, columns = new_cols)
+        df.index = np.arange(1, len(df)+1)
+
+        return df
+    except Exception as e:
+        show_error(e, "dataframe creation failed")
 
 
 def explore(path):
