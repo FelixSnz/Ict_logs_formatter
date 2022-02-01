@@ -1,7 +1,8 @@
 
 
+from msvcrt import LK_LOCK
 from posixpath import split
-from tkinter import messagebox
+from tkinter import E, messagebox
 from tkinter.messagebox import NO
 from turtle import bgcolor, width
 from anytree.node.node import Node
@@ -12,6 +13,7 @@ import sys, os
 from matplotlib.pyplot import text
 from tkcalendar import DateEntry
 from datetime import datetime
+from collections import defaultdict
 import dft
 import spc
 
@@ -51,6 +53,14 @@ amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 has_limits = True
 nest_numbers = []
+
+units = {
+    "JUM":"?",
+    "RES":'Ω',
+    "CAP":'F',
+    "DIO":'?',
+    "IND":'H'
+}
 
 # M:/Public/Luis Dominguez/64002696_p/GR&R/1
 
@@ -298,7 +308,7 @@ class MainApplication(tk.Frame):
             global dicts_counter
             dicts_counter = 0
 
-            set_of_trees = {}
+            set_of_trees = defaultdict(list)
 
             counter = 0
             
@@ -313,47 +323,11 @@ class MainApplication(tk.Frame):
                 self.browse_btn["state"] = "normal"
                 show_error(err, "invalid path")
                 raise RuntimeError
+            
+            
 
-            self.pb1.config(mode="determinate")
-            self.status_label.config(text="calculating amount of nests...",  fg='black')
-
-
-            for fname in glob.iglob(logs_path + '/**', recursive=True):
-                counter += 1
-
-                self.update_progress_bar(counter, len(all_files))
-
-                
-
-                if os.path.isfile(fname):
-
-                    with open(fname) as log_f:
-
-                        raw_data = log_f.read()
-
-                        tree = self.log_to_tree(raw_data)
-
-                        if tree != None:
-
-                            file_name = log_f.name.split("\\")[-1]
-
-                            nest_number = self.get_nest_number(file_name)
-                            num_lines = sum(1 for line in open(fname))
-
-                            if not nest_number in set_of_trees:
-
-                                if self.can_show_empties.get():
-                                    set_of_trees[nest_number] = []
-                                    nest_numbers.append(nest_number)
-                                else:
-                                    if num_lines > 30:
-                                        set_of_trees[nest_number] = []
-                                        nest_numbers.append(nest_number)
             counter = 0
             self.status_label.config(text="formating log files...",  fg='black')
-            global amount_of_nests
-            amount_of_nests = len(set_of_trees)
-
             for fname in glob.iglob(logs_path + '/**', recursive=True):
 
                 counter += 1
@@ -367,6 +341,9 @@ class MainApplication(tk.Frame):
                         file_name = log_f.name.split("\\")[-1]
 
                         nest_number = self.get_nest_number(file_name)
+                        
+                        if not nest_number in nest_numbers:
+                            nest_numbers.append(nest_number)
 
                         raw_data = log_f.read()
 
@@ -386,32 +363,42 @@ class MainApplication(tk.Frame):
                                     set_of_trees[nest_number].append(tree)
                         else:
                             print("empty/none tree")
-
+            global amount_of_nests
+            amount_of_nests = len(set_of_trees)
+            print("set of trees: ", set_of_trees)
             data_dict, sheet_ids = self.trees_to_excel_data(set_of_trees)
             self.set_buttons_state("normal")
             self.root.update_idletasks()
             self.pb1['value'] = 100
             self.progress_bar_label.config(text=str(int(100))+'% | ('+ str(dicts_counter)+"/" + str(amount_of_nests)+")")
-            self.status_label.config(text="Export is enabled!",  fg='black')
+            
             # print("dd: ", data_dict)
             
             if data_dict != {}:
+                self.status_label.config(text="Export is enabled!",  fg='black')
                 if messagebox.askokcancel(message="el formato a sido completado \n¿Desea exportar ahora?", title='Formateo completo'):
                     self.export_caller(data_dict, sheet_ids)
+            else:
+                messagebox.showwarning(message="There were no matches for the inserted date or serial", title="Logs not found")
+                self.status_label.config(text="No matched logs",  fg='black')
+                self.export_btn["state"] = "disabled"
 
 
-                self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
+            self.export_btn.config(command=lambda : self.export_caller(data_dict, sheet_ids))
         except Exception as err:
             show_error(err, "data extraction error")
 
     
     def has_serial(self, trees, tree):
-        for master_tree in trees:
-            for master_batch in master_tree.children:
-                for batch in tree.children:
-                    if master_batch.serial == batch.serial:
-                        return True
-        return False
+        try:
+            for master_tree in trees:
+                for master_batch in master_tree.children:
+                    for batch in tree.children:
+                        if master_batch.serial == batch.serial:
+                            return True
+            return False
+        except Exception as e:
+            show_error(e, "duplicate check error")
 
         
     #returns the nest number given a log file name
@@ -444,8 +431,11 @@ class MainApplication(tk.Frame):
         #temp_tn is refering to a temporal test name, and temp_sv is refering to a temporal set of values
         try:
             for trees in set_of_trees.values():
+                print("asmodeos")
 
                 temp_tn, temp_sv = self.dicts_to_excel_data(self.trees_to_dicts(trees))
+                # print("test names: ", temp_tn)
+                # print("test vals: ", temp_sv)
                 if not tuple(temp_tn) in data_dict:
                     data_dict[tuple(temp_tn)] = temp_sv
                 else:
@@ -523,31 +513,35 @@ class MainApplication(tk.Frame):
             
             test_names.insert(0, "")
             test_names.insert(0, "Test names")
+            print("test names result: ", test_names)
             
             err_index = len(test_names)
 
-            if not self.can_show_fails.get():
-                err_idxs = []
+            # if not self.can_show_fails.get():
+
+            #     err_idxs = []
                 
-                for values in set_of_values:
+            #     for values in set_of_values:
 
                     
-                    values = list(values)
+            #         values = list(values)
                     
 
-                    if not values.count("NONE") == len(values) - 2:
-                        if "NONE" in values:
-                            err_idxs.append(values.index("NONE"))
+            #         if not values.count("NONE") == len(values) - 2:
+            #             if "NONE" in values:
+            #                 err_idxs.append(values.index("NONE"))
                 
-                err_index = min(err_idxs)
-                new_set_of_values = []
-                for values in set_of_values:
-                    new_set_of_values.append(values[:err_index])
-                    # print("len of new vals: ", len(values[:err_index]))
+            #     if len(err_idxs) > 0:
                 
-                set_of_values = new_set_of_values
-                test_names = test_names[:err_index]
-                # print("len of new tests_names: ", len(test_names))
+            #         err_index = min(err_idxs)
+            #         new_set_of_values = []
+            #         for values in set_of_values:
+            #             new_set_of_values.append(values[:err_index])
+            #             # print("len of new vals: ", len(values[:err_index]))
+                    
+            #         set_of_values = new_set_of_values
+            #         test_names = test_names[:err_index]
+            #         # print("len of new tests_names: ", len(test_names))
             
             for values in set_of_values:
                 print("vals len: ", len(values))
@@ -558,6 +552,8 @@ class MainApplication(tk.Frame):
             header_labels = []
 
             header_labels.append(tuple(test_names))
+
+            # print("hd labels: ", header_labels)
             low_limits = []
             high_limits = []
             if has_limits:
@@ -597,8 +593,10 @@ class MainApplication(tk.Frame):
             dicts_counter += 1
 
 
-            # print("this are the nest number: ", nest_numbers)
+            print("this are the nest number: ", nest_numbers)
+
             self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
+
 
 
             # print("header:", header_labels)
@@ -920,7 +918,10 @@ class MainApplication(tk.Frame):
                                 dict[block.test_name] = [block.children[0].value]
                                 # print("gola")
 
-                    dicts.append([[batch.serial, batch.date], dict])  
+                    dicts.append([[batch.serial, batch.date], dict]) 
+            
+
+            # print("dicts: ", dicts)
 
             return dicts
 
@@ -944,44 +945,47 @@ class MainApplication(tk.Frame):
                 ('All Files', '*.*')]
 
             file = asksaveasfile(filetypes = files, defaultextension = files)
-            for key, value in data_dict.items():
+            if file != None:
+                for key, value in data_dict.items():
 
-                if key[1] == 2:
-                    key = key[0]
-                self.status_label.config(text="sorting the data...",  fg='black')
-                df = convert_to_dataframe(value, key)
-                dfs.append(df)
-            
-            new_dfs = []
-            for idx, df in enumerate(dfs):
+                    if key[1] == 2:
+                        key = key[0]
+                    self.status_label.config(text="sorting the data...",  fg='black')
+                    df = convert_to_dataframe(value, key)
+                    dfs.append(df)
                 
-                if not df.empty:
-                    new_dfs.append(df)
-
-            self.pb1.config(mode="indeterminate")
-            self.pb1.start(10)
-            with pd.ExcelWriter(file.name) as writer: 
-                for idx, df in enumerate(new_dfs):
-                    status_text = "creating sheets..."
-                    pb1_label_text = str(int(0))+'% | ('+ str(idx+1)+"/" + str(amount_of_nests)+")"
-                    self.progress_bar_label.config(text=pb1_label_text)
-                    self.status_label.config(text=status_text,  fg='black')
-                    counter += 1
+                new_dfs = []
+                for idx, df in enumerate(dfs):
                     
-                    nest_id = ids[idx]
-                    if not str(nest_id) == str:
-                        nest_id = str(nest_id)
+                    if not df.empty:
+                        new_dfs.append(df)
 
-                    df.to_excel(writer, sheet_name='Nido '+ nest_id )
-            
-            self.pb1.stop()
+                self.pb1.config(mode="indeterminate")
+                self.pb1.start(10)
+                with pd.ExcelWriter(file.name) as writer: 
+                    for idx, df in enumerate(new_dfs):
+                        status_text = "creating sheets..."
+                        pb1_label_text = str(int(0))+'% | ('+ str(idx+1)+"/" + str(amount_of_nests)+")"
+                        self.progress_bar_label.config(text=pb1_label_text)
+                        self.status_label.config(text=status_text,  fg='black')
+                        counter += 1
+                        
+                        nest_id = ids[idx]
+                        if not str(nest_id) == str:
+                            nest_id = str(nest_id)
 
-            self.set_buttons_state("normal")
-            
-            self.status_label.config(text="Done!", fg='white')
-            if messagebox.askokcancel(message="La exportacion a excel ha terminado \n¿Desea abrir la ubicacion del archivo?", title= "exportacion terminada"):
-                explore(file.name)
-            self.pb1.config(mode="determinate")
+                        df.to_excel(writer, sheet_name='Nido '+ nest_id )
+                
+                self.pb1.stop()
+
+                self.set_buttons_state("normal")
+                
+                self.status_label.config(text="Done!")
+                if messagebox.askokcancel(message="La exportacion a excel ha terminado \n¿Desea abrir la ubicacion del archivo?", title= "exportacion terminada"):
+                    explore(file.name)
+                self.pb1.config(mode="determinate")
+            else:
+                self.set_buttons_state("normal")
         except Exception as err:
             show_error(err, "export error")
     
@@ -993,6 +997,7 @@ class MainApplication(tk.Frame):
         self.from_time_btn["state"] = state
         self.check_btn_showempties["state"] = state
         self.check_btn_showdups["state"] = state
+        self.check_btn_showfails["state"] = state
 
     def on_closing(self):
 
