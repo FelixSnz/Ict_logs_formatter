@@ -1,12 +1,14 @@
+from ast import While
 from statistics import stdev
 from numpy.core.fromnumeric import mean
 import tkinter as tk
-import sys
+import sys, os
+import subprocess
+FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 def get_dicts_only(dicts):
     dicts_only = []
     for d in dicts:
-        # print("this is serial and dict: ", d[1])
         dicts_only.append(d[1])
     return dicts_only
 
@@ -26,7 +28,6 @@ def to_float(str_data):
 
 def reduce_limits(duplic_limits):
     new_limits = []
-    # print("duplic: d", duplic_limits)
     for limits in duplic_limits:
         for limit in limits:
             new_limits.append(limit)
@@ -51,9 +52,7 @@ def get_limits(dicts, low_limits=True):
             values = []
             for dict in get_dicts_only(dicts):
                 if bool(dict) and test_name in list(dict.keys()):
-                    # print("this is the dict: ", dict)
-                    # print("this is the test: ", test_name)
-                    # print("this are the limits: ", dict[test_name])
+
                     if low_limits:
                         if len(dict[test_name][1]) == 2:
                             limit = dict[test_name][1][0]
@@ -72,13 +71,12 @@ def get_limits(dicts, low_limits=True):
                             values.append(limit)
                 else:
                     limit_counter +=1
-                    # print("quesestoio9oo")
-                    # values.append(dict[test_name][1])
+
             dict_results[test_name] = values
 
         limits = []
         for val in dict_results.values():
-            # print("this is val 0: ", val)
+
             limits.append(to_float(val))
 
         limits = reduce_limits(limits)
@@ -99,33 +97,41 @@ def show_error(e, tittle_error):
         tk.messagebox.showerror(tittle_error, error)  
 
 def get_maxs(dicts):
+    try:
 
-    test_names = []
+        test_names = []
 
-    for dict in get_dicts_only(dicts):
-        for test_name in dict.keys():
-            if not test_name in test_names:
-                test_names.append(test_name)
-
-    # print("this are the test names: ", test_names)
-    dict_results = {}
-    for test_name in test_names:
-        values = []
         for dict in get_dicts_only(dicts):
-            if bool(dict) and test_name in list(dict.keys()):
-                # print("this is the dict: ", dict)
-                values.append(dict[test_name][0])
-        dict_results[test_name] = values
+            for test_name in dict.keys():
+                if not test_name in test_names:
+                    test_names.append(test_name)
 
-    maxims = []
-    for val in dict_results.values():
-        # print("this is val 0: ", val)
-        maxims.append(max(to_float(val)))
-    
-    # print(maxims)
+        # print("this are the test names: ", test_names)
+        dict_results = {}
+        for test_name in test_names:
+            values = []
+            for dict in get_dicts_only(dicts):
+                if bool(dict) and test_name in list(dict.keys()):
+                    # print("this is the dict: ", dict)
+                    val = dict[test_name][0]
+                    if val != "FAILED":
+                        values.append(val)
+            dict_results[test_name] = values
 
-    maxims.insert(0, "Max Values")
-    return maxims
+        maxims = []
+        
+        vals = list(dict_results.values())
+
+        for val in vals:
+            print("this is val: ", val)
+            maxims.append(max(to_float(val)))
+        
+        # print(maxims)
+
+        maxims.insert(0, "Max Values")
+        return maxims
+    except Exception as e:
+        show_error(e, "get max values error")
 
 def get_mins(dicts):
 
@@ -142,11 +148,15 @@ def get_mins(dicts):
         values = []
         for dict in get_dicts_only(dicts):
             if bool(dict) and test_name in list(dict.keys()):
-                values.append(dict[test_name][0])
+                val = dict[test_name][0]
+                if val != "FAILED":
+                    values.append(val)
         dict_results[test_name] = values
 
     mins = []
-    for val in dict_results.values():
+    vals = list(dict_results.values())
+
+    for val in vals:
         # print("this is val 0: ", val)
         mins.append(min(to_float(val)))
     
@@ -170,16 +180,20 @@ def get_means(dicts):
         values = []
         for dict in get_dicts_only(dicts):
             if bool(dict) and test_name in list(dict.keys()):
-                # print("this is the dict: ", dict)
-                values.append(dict[test_name][0])
+                val = dict[test_name][0]
+                if val != "FAILED":
+                    values.append(val)
         dict_results[test_name] = values
 
     means = []
-    for val in dict_results.values():
-        # print("this is val 0: ", val)
+    vals = list(dict_results.values())
+
+    for val in vals:
+        print(val)
+
         means.append(mean(to_float(val)))
     
-    # print(means)
+
 
     means.insert(0, "Mean Values")
     return means
@@ -193,25 +207,96 @@ def get_stdevs(dicts):
             if not test_name in test_names:
                 test_names.append(test_name)
 
-
     dict_results = {}
     for test_name in test_names:
         values = []
         for dict in get_dicts_only(dicts):
             if bool(dict) and test_name in list(dict.keys()):
-                # print("this is the dict: ", dict)
                 values.append(dict[test_name][0])
         dict_results[test_name] = values
 
     stdevs = []
     for val in dict_results.values():
-        # print("this is val 0: ", val)
+
         stdevs.append(stdev(to_float(val)))
-    
-    # print(len(mins))
 
     stdevs.insert(0, "stdev Values")
     return stdevs
+
+def get_test_limits(test_names, set_of_values, limits_test_name):
+    try:
+
+        limits_idx = 0
+
+        for idx, test_name in enumerate(test_names):
+            if test_name == limits_test_name:
+                limits_idx = idx
+                break
+        
+
+        return set_of_values[limits_idx -2]
+    except Exception as e:
+        show_error(e, "get test limits func error")
+    
+
+
+
+def get_test_values(test_names, set_of_values, values_test_name):
+    values_idx = 0
+    test_values = []
+    serials = []
+    dates = []
+
+    for idx, test_name in enumerate(test_names):
+        if test_name == values_test_name:
+            values_idx = idx
+            break
+
+    for values in set_of_values:
+
+        serials.append(values[0])
+        dates.append(values[1])
+        test_values.append(values[values_idx])
+    
+    return test_values, serials, dates
+
+
+
+
+
+def get_dicts_only(dicts):
+    dicts_only = []
+    for d in dicts:
+        dicts_only.append(d[1])
+    return dicts_only
+
+def get_serials_only(dicts):
+    serials_only = []
+    for d in dicts:
+        serials_only.append(d[0][0])
+    return serials_only
+
+def get_dates_only(dicts):
+    dates_only = []
+    for d in dicts:
+        dates_only.append(d[0][1])
+    return dates_only
+
+
+
+
+
+def explore(path):
+    # explorer would choke on forward slashes
+    path = os.path.normpath(path)
+
+    if os.path.isdir(path):
+        subprocess.run([FILEBROWSER_PATH, path])
+    elif os.path.isfile(path):
+        subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
+
+
+
 
 
 

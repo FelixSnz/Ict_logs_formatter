@@ -15,13 +15,13 @@ from tkinter.filedialog import asksaveasfile, askdirectory
 from tkinter.ttk import Progressbar
 
 from concurrent import futures
-import subprocess
+
 
 import tkinter as tk
 
 
 import iconb64
-FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
+
 
 logs_path = str(" ")
 
@@ -380,10 +380,10 @@ class MainApplication(tk.Frame):
 
             test_names = []
 
-            total_iterations = len(max(get_dicts_only(dicts), key=len).keys()) * len(get_dicts_only(dicts)) * 2
+            total_iterations = len(max(lf.get_dicts_only(dicts), key=len).keys()) * len(lf.get_dicts_only(dicts)) * 2
             self.pb1.config(mode="determinate")
             
-            for dict in get_dicts_only(dicts):
+            for dict in lf.get_dicts_only(dicts):
 
                 for test_name in dict.keys():
 
@@ -399,7 +399,7 @@ class MainApplication(tk.Frame):
             set_of_values = []
             sample_count = 0
             test_limits = []
-            for idx, dict in enumerate(get_dicts_only(dicts)):
+            for idx, dict in enumerate(lf.get_dicts_only(dicts)):
                 sample_count += 1
                 values = []
                 for test_name in test_names:
@@ -418,8 +418,8 @@ class MainApplication(tk.Frame):
                         values.append(dict[test_name][0])
                         test_limits.append(dict[test_name][1])
                 
-                serial  = get_serials_only(dicts)[idx]
-                date = get_dates_only(dicts)[idx]
+                serial  = lf.get_serials_only(dicts)[idx]
+                date = lf.get_dates_only(dicts)[idx]
                 # print("this is a serial: ", serial)
                 values.insert(0, serial)
                 values.insert(1, date)
@@ -427,37 +427,37 @@ class MainApplication(tk.Frame):
                 
             test_names.insert(0, "")
             test_names.insert(0, "Test names")
-            print("test names result: ", test_names)
+            # print("test names result: ", test_names)
             
             err_index = len(test_names)
 
-            if not self.can_show_fails.get():
+            # if not self.can_show_fails.get():
 
-                err_idxs = []
+            #     err_idxs = []
                 
-                for values in set_of_values:
+            #     for values in set_of_values:
 
-                    values = list(values)
+            #         values = list(values)
                     
-                    if not values.count("NONE") == len(values) - 2:
-                        if "NONE" in values:
-                            err_idxs.append(values.index("NONE"))
+            #         if not values.count("NONE") == len(values) - 2:
+            #             if "NONE" in values:
+            #                 err_idxs.append(values.index("NONE"))
                 
-                if len(err_idxs) > 0:
+            #     if len(err_idxs) > 0:
                 
-                    err_index = min(err_idxs)
-                    new_set_of_values = []
-                    for values in set_of_values:
-                        new_set_of_values.append(values[:err_index])
-                        # print("len of new vals: ", len(values[:err_index]))
+            #         err_index = min(err_idxs)
+            #         new_set_of_values = []
+            #         for values in set_of_values:
+            #             new_set_of_values.append(values[:err_index])
+            #             # print("len of new vals: ", len(values[:err_index]))
                     
-                    set_of_values = new_set_of_values
-                    test_names = test_names[:err_index]
-                    # print("len of new tests_names: ", len(test_names))
+            #         set_of_values = new_set_of_values
+            #         test_names = test_names[:err_index]
+            #         # print("len of new tests_names: ", len(test_names))
             
-            for values in set_of_values:
-                print("vals len: ", len(values))
-            print("tn len: ", len(test_names))
+            # for values in set_of_values:
+            #     print("vals len: ", len(values))
+            # print("tn len: ", len(test_names))
                  
             header_labels = []
 
@@ -472,8 +472,8 @@ class MainApplication(tk.Frame):
                 low_limits.insert(1, "")
                 header_labels.append(tuple(low_limits[:err_index]))
 
-                print("ll no err idx: ", len(low_limits))
-                print("whit err idx: ", len(low_limits[:err_index]))
+                # print("ll no err idx: ", len(low_limits))
+                # print("whit err idx: ", len(low_limits[:err_index]))
                 # print("ll len: ", len(low_limits))
             
                 high_limits = lf.get_limits(dicts, False)
@@ -497,7 +497,7 @@ class MainApplication(tk.Frame):
 
             dicts_counter += 1
 
-            print("this are the nest number: ", nest_numbers)
+            # print("this are the nest number: ", nest_numbers)
 
             self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
 
@@ -538,15 +538,12 @@ class MainApplication(tk.Frame):
             extract_data = ""
 
             prev_name = ''
-            blck_counter = 0
             for idx, char in enumerate(raw_data):
 
                 if char == '{':
 
                     name = raw_data[idx+2:raw_data.index("|", idx)]
 
-                    if name == 'BLOCK':
-                        blck_counter += 1
 
                     if prev_name == 'BTEST':
 
@@ -556,6 +553,11 @@ class MainApplication(tk.Frame):
                         pass
                     elif prev_name == 'BATCH':
                         extract_data += '\n'
+                    elif prev_name != 'RPT' and name == 'RPT':
+                        extract_data += '\n'
+
+                        # if not self.can_show_fails.get():
+                        #     return
                     
                     prev_name = name
 
@@ -567,10 +569,12 @@ class MainApplication(tk.Frame):
             
             new_data_ = extract_data.split("\n\n")
 
+
             btch_count = 0
 
             new_data = []
             for line in new_data_:
+                # print("line: ", line)
 
                 name = line[1:3]
                 
@@ -589,6 +593,7 @@ class MainApplication(tk.Frame):
                     new_data.append(line)
 
             for idx, data in enumerate(new_data):
+                # print("data: ", data)
 
                 if len(data) > 1:
                     name = data[1:data.index("|", 1)]
@@ -670,6 +675,7 @@ class MainApplication(tk.Frame):
                         # if not self.can_show_empties.get():
                         new_sub_dataset = []
                         for sub_data in new_data[idx+1:]:
+                            # print("sub data: ", sub_data)
                             if len(sub_data) > 1:
                                 name = sub_data[1:sub_data.index("|")]
                                 ind_data = sub_data.split('|')
@@ -684,10 +690,16 @@ class MainApplication(tk.Frame):
 
                         new_data = new_sub_dataset
 
+                        # print("new data: ", new_data)
+
                         for sub_data in new_data:
 
                             if len(sub_data) > 1:
+                                # print("sub data: ", sub_data)
+                        
+
                                 name = sub_data[1:sub_data.index("|")]
+                                # print("name: ", name)
                                 if name == 'BLOCK':
 
                                     blck_count += 1
@@ -721,9 +733,6 @@ class MainApplication(tk.Frame):
                                             global has_limits
                                             if len(ind_data) >= 4:
 
-                                                
-                                                
-
                                                 if 'LIM' in ind_data[3]:
                                                     # print("si tiene limites")
                                                     has_limits = True
@@ -733,7 +742,7 @@ class MainApplication(tk.Frame):
                                                 else:
 
                                                     comp_name = ind_data[0][3:] + '-' + ind_data[3] # anade el tipo especifico de componente
-
+                                                # print("ind data: ", ind_data)
                                                 temp_comp_node = Node(comp_name, parent=temp_blck, value=ind_data[2])
 
                                                 limit_name = ''
@@ -742,9 +751,33 @@ class MainApplication(tk.Frame):
 
                                                     if 'LIM' in d:
                                                         limit_name = d
+                                                        # print("lim: ", limit_name)
             
                                                 if not limit_name == '':
                                                     limits = ind_data[-int(limit_name[-1]):]
+
+                                                    high_lim = limits[-2]
+                                                    low_lim = limits[-1]
+                                                    measure = ind_data[2]
+
+                                                    # print("low lim: ", low_lim)
+                                                    # print("measure: ", measure)
+                                                    # print("high lim: ", high_lim)
+
+                                                    
+                                                    if not float(low_lim) < float(measure) < float(high_lim):
+                                                        
+                                                        if not self.can_show_fails.get():
+                                                            return None
+                                                        else:
+                                                            pass
+                                                            # temp_comp_node.value = "FAILED"
+
+                                                            # print("node name: ", temp_comp_node.value)
+
+
+                                                            
+
                                                     temp_lim_node = Node(limit_name, parent=temp_comp_node, value=limits)
                                             else:
                                                 has_limits = False
@@ -773,54 +806,27 @@ class MainApplication(tk.Frame):
     
     def trees_to_dicts(self, trees):
         
-
         try:
-
             dicts = []
-
             for tree in trees:
-                # print(RenderTree(tree))
-                # print(tree.children)
-
                 dict = {}
-                
                 for batch in tree.children:
-
-                    
-                    
                     for idx, block in enumerate(batch.children): #the block has the name of the test
-                        # print("children: ", block.children)
                         if len(block.children) > 1:
-                            
-        
                             for comp in block.children:
-
                                 comp_name = "-" + comp.name
-
                                 test_name = block.test_name + comp_name
-
                                 if len(comp.children) > 0:
-
                                     lims = comp.children[0].value
-
                                     dict[test_name] = [comp.value, lims]
                                 else:
-                                    # print("comp: ", comp)
                                     dict[test_name] = [comp.value]
                         else:
-
                             if len(block.children[0].children) > 0:
-
                                 dict[block.test_name] = [block.children[0].value, block.children[0].children[0].value]
                             else:
                                 dict[block.test_name] = [block.children[0].value]
-                                # print("gola")
-
                     dicts.append([[batch.serial, batch.date], dict]) 
-            
-
-            # print("dicts: ", dicts)
-
             return dicts
 
         except Exception as err:
@@ -880,7 +886,7 @@ class MainApplication(tk.Frame):
                 
                 self.status_label.config(text="Done!")
                 if messagebox.askokcancel(message="La exportacion a excel ha terminado \n¿Desea abrir la ubicacion del archivo?", title= "exportacion terminada"):
-                    explore(file.name)
+                    lf.explore(file.name)
                 self.pb1.config(mode="determinate")
             else:
                 self.set_buttons_state("normal")
@@ -949,6 +955,23 @@ class TabController:
     
     def create_tab(self, tab_name, test_names:list, set_of_values, test_limits):
         try:
+            s = tk.ttk.Style()
+
+            #from os import name as OS_Name
+            if root.getvar('tk_patchLevel')=='8.6.9': #and OS_Name=='nt':
+                def fixed_map(option):
+                    # Fix for setting text colour for Tkinter 8.6.9
+                    # From: https://core.tcl.tk/tk/info/509cafafae
+                    #
+                    # Returns the style map for 'option' with any styles starting with
+                    # ('!disabled', '!selected', ...) filtered out.
+                    #
+                    # style.map() returns an empty list for missing options, so this
+                    # should be future-safe.
+                    return [elm for elm in s.map('Treeview', query_opt=option) if elm[:2] != ('!disabled', '!selected')]
+                s.map('Treeview', foreground=fixed_map('foreground'), background=fixed_map('background'))
+
+
             test_names[0] = "Serials"
             test_names[1] = "Dates"
             self.set_of_values = set_of_values
@@ -962,6 +985,7 @@ class TabController:
             tree_scroll = tk.Scrollbar(temp_tab)
             
             self.my_tn_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set))
+            
             self.my_tn_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
             tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
             tree_scroll.config(command=self.my_tn_trees[-1].yview)
@@ -971,7 +995,9 @@ class TabController:
             self.my_tn_trees[-1].heading('Test names',text='Test names')
 
             for idx, test_name in enumerate(test_names[2:]):
-                self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='', values=test_name)
+                a = self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='aaa', values=test_name, tags=test_name)
+                self.my_tn_trees[-1].tag_configure('1%c2', background='purple')
+                
 
             tn_tree_ballon = tix.Balloon(root)
             tn_tree_ballon.bind_widget(self.my_tn_trees[-1], 
@@ -1025,9 +1051,9 @@ class TabController:
             if item != "":
                 info = self.my_tn_trees[self.tab_index].item(item, 'values')
                 test_name = info[0]
-                limits = get_test_limits(tn, limits, test_name)
+                limits = lf.get_test_limits(tn, limits, test_name)
 
-                test_values, serials, dates = get_test_values(tn, set_of_vals, test_name)
+                test_values, serials, dates = lf.get_test_values(tn, set_of_vals, test_name)
                 # print("serials before :", serials)
                 # print("dates before :", dates)
 
@@ -1078,73 +1104,6 @@ class NewWindow(tk.Toplevel):
             export_btn.pack()
     
 
-
-def get_test_limits(test_names, set_of_values, limits_test_name):
-    try:
-        # print("this are te sv: ", set_of_values)
-        test_limits = []
-        limits_idx = 0
-
-        # print("test names on limit func: ", test_names)
-        # print("this are the limits: ", set_of_values)
-
-        for idx, test_name in enumerate(test_names):
-            if test_name == limits_test_name:
-                limits_idx = idx
-                break
-        
-
-        return set_of_values[limits_idx -2]
-    except Exception as e:
-        show_error(e, "get test limits func error")
-    
-
-
-
-def get_test_values(test_names, set_of_values, values_test_name):
-    values_idx = 0
-    test_values = []
-    serials = []
-    dates = []
-    # print("this are the test names: ", test_names)
-
-    for idx, test_name in enumerate(test_names):
-        if test_name == values_test_name:
-            values_idx = idx
-            break
-
-    for values in set_of_values:
-        # print("this is the idx: ", values_idx)
-        # print("this are the values: ", values[:6])
-        serials.append(values[0])
-        dates.append(values[1])
-        test_values.append(values[values_idx])
-    
-    return test_values, serials, dates
-
-
-
-
-
-def get_dicts_only(dicts):
-    dicts_only = []
-    for d in dicts:
-        dicts_only.append(d[1])
-    return dicts_only
-
-def get_serials_only(dicts):
-    serials_only = []
-    for d in dicts:
-        serials_only.append(d[0][0])
-    return serials_only
-
-def get_dates_only(dicts):
-    dates_only = []
-    for d in dicts:
-        dates_only.append(d[0][1])
-    return dates_only
-
-
 def convert_to_dataframe(data, cols):
     try:
 
@@ -1164,24 +1123,9 @@ def convert_to_dataframe(data, cols):
         show_error(e, "dataframe creation failed")
 
 
-def explore(path):
-    # explorer would choke on forward slashes
-    path = os.path.normpath(path)
-
-    if os.path.isdir(path):
-        subprocess.run([FILEBROWSER_PATH, path])
-    elif os.path.isfile(path):
-        subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
-
-
-
-
-
 
 if __name__ == "__main__":
-
     root = tix.Tk()
-    
     main = MainApplication(root)
     root.mainloop()
 
