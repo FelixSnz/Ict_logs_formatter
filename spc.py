@@ -62,8 +62,8 @@ def on_pick(event, values, serials, dates):
     # print("dates: ", dates)
     print("clicked_value: ", clicked_value)
     print("y: ", y)
-    print("serial: ", serials[int(round(x_))])
-    print("date: ", dates[int(round(x_))])
+    print("serial: \n", serials[int(round(x_))])
+    print("date: \n", dates[int(round(x_))])
 
     tk.messagebox.showinfo(message="serial: " + serials[int(round(x_))] + "\n" +
                                    "Date: " + str(dates[int(round(x_))]),
@@ -103,7 +103,7 @@ def plot(x, t_name, limits, s, d):
         r = [x.max()- x.min()] 
 
         # Plot x-bar and R charts
-        fig, axs = plt.subplots(1, figsize=(15,4.5))
+        fig, axs = plt.subplots(1, figsize=(10,4.5))
         
         low_limit = np.array(low_limit).astype(float)
         high_limit = np.array(high_limit).astype(float)
@@ -122,19 +122,19 @@ def plot(x, t_name, limits, s, d):
 
         leg1 = fig.legend(loc=7)
 
-        ll_line.set_label("Low Limit: " + str(low_limit))
+        ll_line.set_label("Low: " + str(low_limit))
 
-        hl_line.set_label("High Limit: " + str(high_limit))
+        hl_line.set_label("High: " + str(high_limit))
 
         legend_elements = [hl_line, ll_line]
 
 
-        leg2 = fig.legend(handles=legend_elements, loc="center", bbox_to_anchor=(0.91, 0.8))
+        leg2 = fig.legend(handles=legend_elements, loc="upper right")
         # axs.legend(handles=legend_elements, loc="upper left", bbox_to_anchor=(1.02, 1))
         # axs.legend(["High Limit" + str(high_limit), "Low Limit" + str(low_limit)], loc=5, mar)
 
         fig.tight_layout()
-        fig.subplots_adjust(right=0.85)   
+        fig.subplots_adjust(right=0.86)   
 
 
 

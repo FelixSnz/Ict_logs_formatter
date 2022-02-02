@@ -1,54 +1,41 @@
-
-
-from msvcrt import LK_LOCK
-from posixpath import split
-from tkinter import E, messagebox
-from tkinter.messagebox import NO
-from turtle import bgcolor, width
+from tkinter import messagebox
 from anytree.node.node import Node
 from anytree import RenderTree
-import tkinter as tk
 from tkinter import tix
 import sys, os
-from matplotlib.pyplot import text
 from tkcalendar import DateEntry
 from datetime import datetime
 from collections import defaultdict
-import dft
-import spc
-
-import time as tm
-
-from statistics import stdev
-from numpy.core.fromnumeric import mean
 import pandas as pd
 import glob
-import os
-import re
 import numpy as np
-import re
 import base64
 
-from tkinter import filedialog
-
-from tkinter.filedialog import asksaveasfile
+from tkinter.filedialog import asksaveasfile, askdirectory
 from tkinter.ttk import Progressbar
 
 from concurrent import futures
-from concurrent import *
-import os
 import subprocess
 
 import tkinter as tk
-from tktimepicker import SpinTimePickerModern
-from tktimepicker import constants
+
 
 import iconb64
 FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 logs_path = str(" ")
+
+# ----------------- Local modules -----------------
+
 import localfuncs as lf
 import tooltip
+import dft
+import spc
+import timepicker
+
+# ------------------- END --------------------------
+
+
 dicts_counter = 0
 amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
@@ -75,7 +62,7 @@ class MainApplication(tk.Frame):
         icon = iconb64.ICON
 
         icondata= base64.b64decode(icon)
-        # print(icon)
+
         ## The temp file is icon.ico
         tempFile= "icon.ico"
         iconfile= open(tempFile,"wb")
@@ -162,7 +149,7 @@ class MainApplication(tk.Frame):
         self.from_time_lbl = tk.Label(self.pre_top_up, text="00:00 AM", bg='gray94')
         self.from_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.from_time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.set_time(self.from_time_lbl))
+        self.from_time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:timepicker.set_time(self, self.from_time_lbl))
 
         tooltip.CreateToolTip(self.from_time_btn, "click to set the 'from time' in 12h format")
 
@@ -180,7 +167,7 @@ class MainApplication(tk.Frame):
         self.to_time_lbl = tk.Label(self.pre_top_down, text="00:00 AM", bg='gray94')
         self.to_time_lbl.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
 
-        self.to_time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.set_time(self.to_time_lbl))
+        self.to_time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:timepicker.set_time(self, self.to_time_lbl))
 
         tooltip.CreateToolTip(self.to_time_btn, "click to set the 'to time' in 12h format")
 
@@ -213,36 +200,7 @@ class MainApplication(tk.Frame):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         self.middle_frame.pack(fill=tk.BOTH, expand=True)
 
-    def set_time(self, label):
-
-        top = tk.Toplevel(self.root)
-
-        time_picker = SpinTimePickerModern(top)
-        # time_picker = SpinTimePickerOld(top)
-        time_picker.addAll(constants.HOURS12)  # adds hours clock, minutes and period
-        time_picker.configureAll(bg="#404040", height=1, fg="#ffffff", font=("Times", 16), hoverbg="#404040",
-                                        hovercolor="#d73333", clickedbg="#2e2d2d", clickedcolor="#d73333")
-        time_picker.configure_seprator(bg="#404040", fg="#ffffff")
-        # time_picker.addHours12()
-        # time_picker.addHours24()
-        # time_picker.addMinutes()
-
-        time_picker.pack(expand=True, fill="both")
-
-        ok_btn = tk.Button(top, text="ok", command=lambda: self.updateTime(time_picker.time(), label))
-        ok_btn.pack()
     
-    def updateTime(self, time, label):
-        label.configure(text="{}:{} {}".format(*time))
-        date_vals = str(self.from_cal.get_date()).split("-")
-
-        time_vals = self.to_24h_format(self.from_time_lbl['text'])
-
-        # print(date_vals)
-        # print(time_vals)
-
-        for val in time_vals:
-            date_vals.append(val[:2])
         
 
 
@@ -264,7 +222,7 @@ class MainApplication(tk.Frame):
     def browse_for_path(self):
         self.status_label.config(text=" ", bg='gray94',  fg='black')
         currdir = os.getcwd()
-        tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
+        tempdir = askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
         if len(tempdir) > 0:
             global logs_path
             logs_path = tempdir
@@ -384,16 +342,6 @@ class MainApplication(tk.Frame):
         if '-' in file_name:
             nest_number = file_name.split('-')[:-1]
             if len(nest_number) < 4:
-
-            # if len(nest_number) > 1:
-            #     new_nest_number = ''
-            #     for segment in nest_number:
-            #         new_nest_number += segment
-                
-            #     return str(new_nest_number)
-
-            # else:
-            #     return str(nest_number[0])
                 return nest_number[0]
             else:
                 return 'NA'
@@ -410,8 +358,6 @@ class MainApplication(tk.Frame):
         try:
             for trees in set_of_trees.values():
                 temp_tn, temp_sv = self.dicts_to_excel_data(self.trees_to_dicts(trees))
-                # print("test names: ", temp_tn)
-                # print("test vals: ", temp_sv)
                 if not tuple(temp_tn) in data_dict:
                     data_dict[tuple(temp_tn)] = temp_sv
                 else:
@@ -433,7 +379,6 @@ class MainApplication(tk.Frame):
             counter = 0
 
             test_names = []
-            # test_limits = []
 
             total_iterations = len(max(get_dicts_only(dicts), key=len).keys()) * len(get_dicts_only(dicts)) * 2
             self.pb1.config(mode="determinate")
@@ -450,11 +395,7 @@ class MainApplication(tk.Frame):
                     if not test_name in test_names:
                         test_names.append(test_name)
 
-            
-            # total_iterations = len(get_dicts_only(dicts)[0].keys()) * len(get_dicts_only(dicts)) + len(get_dicts_only(dicts)) *len(test_names)
-
-
-                
+        
             set_of_values = []
             sample_count = 0
             test_limits = []
@@ -484,8 +425,6 @@ class MainApplication(tk.Frame):
                 values.insert(1, date)
                 set_of_values.append(values)
                 
-
-            
             test_names.insert(0, "")
             test_names.insert(0, "Test names")
             print("test names result: ", test_names)
@@ -498,10 +437,8 @@ class MainApplication(tk.Frame):
                 
                 for values in set_of_values:
 
-                    
                     values = list(values)
                     
-
                     if not values.count("NONE") == len(values) - 2:
                         if "NONE" in values:
                             err_idxs.append(values.index("NONE"))
@@ -522,8 +459,6 @@ class MainApplication(tk.Frame):
                 print("vals len: ", len(values))
             print("tn len: ", len(test_names))
                  
-
-
             header_labels = []
 
             header_labels.append(tuple(test_names))
@@ -559,20 +494,12 @@ class MainApplication(tk.Frame):
             mean_values = lf.get_means(dicts)
             mean_values.insert(1, "")
             header_labels.append(tuple(mean_values[:err_index]))
-            # print("mean len: ", len(mean_values))
-
-            
-
-            # print("vals: ", test_names)
 
             dicts_counter += 1
-
 
             print("this are the nest number: ", nest_numbers)
 
             self.tab_controller.create_tab("Nido: " + str(nest_numbers[dicts_counter-1]), test_names, set_of_values, test_limits)
-
-
 
             # print("header:", header_labels)
             return tuple(header_labels), set_of_values
@@ -701,7 +628,7 @@ class MainApplication(tk.Frame):
                             date_ = datetime(year, month, day, hour, min, seg)
 
                             date_vals = str(self.from_cal.get_date()).split("-")
-                            time_vals = self.to_24h_format(self.from_time_lbl['text'])
+                            time_vals = timepicker.to_24h_format(self.from_time_lbl['text'])
                             for val in time_vals:
                                 date_vals.append(val[:2])
 
@@ -710,7 +637,7 @@ class MainApplication(tk.Frame):
                             # print(date_)
 
                             date_vals = str(self.to_cal.get_date()).split("-")
-                            time_vals = self.to_24h_format(self.to_time_lbl['text'])
+                            time_vals = timepicker.to_24h_format(self.to_time_lbl['text'])
                             for val in time_vals:
                                 date_vals.append(val[:2])
                             to_date = dft.to_date_format(int(date_vals[0]), int(date_vals[1]), int(date_vals[2]), int(date_vals[3]), int(date_vals[4][:2]))
@@ -840,14 +767,7 @@ class MainApplication(tk.Frame):
         except Exception as err:
             show_error(err, "log to tree failed")
     
-    def to_24h_format(self, _12h_format):
-        time_vals = _12h_format[:5].split(":")
-        am_pm = _12h_format[-2:]
-
-        if am_pm == "PM":
-            time_vals[0] = str(int(time_vals[0]) +12)
-        
-        return time_vals
+    
 
 
     
