@@ -48,6 +48,7 @@ FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
 
 logs_path = str(" ")
 import localfuncs as lf
+import tooltip
 dicts_counter = 0
 amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
@@ -99,22 +100,22 @@ class MainApplication(tk.Frame):
         self.check_btn_showempties = tk.Checkbutton(self.upper_top_frame, text = "Show empty logs?", variable = self.can_show_empties, onvalue = 1, offvalue = 0)
         self.check_btn_showempties.pack(side=tk.RIGHT)
 
+        tooltip.CreateToolTip(self.check_btn_showempties, "check or not before the conversion process")
+
         self.can_show_dups = tk.IntVar()
         self.check_btn_showdups = tk.Checkbutton(self.upper_top_frame, text = "Show duplicate serials?", variable = self.can_show_dups, onvalue = 1, offvalue = 0)
         self.check_btn_showdups.pack(side=tk.RIGHT)
+
+        tooltip.CreateToolTip(self.check_btn_showdups, "check or not before the conversion process")
 
         self.can_show_fails = tk.IntVar()
         self.check_btn_showfails = tk.Checkbutton(self.upper_top_frame, text = "Show failed tests?", variable = self.can_show_fails, onvalue = 1, offvalue = 0)
         self.check_btn_showfails.pack(side=tk.RIGHT)
 
+        tooltip.CreateToolTip(self.check_btn_showfails, "check or not before the conversion process")
+
         # ----------------------- END ---------------------------------
-
-        check_btn_hover_msg = tix.Balloon(root)
-        check_btn_hover_msg.bind_widget(self.check_btn_showempties, 
-        balloonmsg="check or not before the conversion process")
-
-        for sub in check_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
+        
 
         self.upper_top_frame.pack(fill=tk.BOTH)
         self.top_frame = tk.Frame(root, bg='gray94', highlightthickness=2)
@@ -126,12 +127,9 @@ class MainApplication(tk.Frame):
         self.textEntryPath.trace("w", lambda name, index,mode, var=self.textEntryPath: self.pathEntry_callback(var))
         self.browse_btn = tk.Button(self.top_frame, text=' browse', command=lambda:self.browse_for_path())
         self.browse_btn.pack(side=tk.LEFT,  anchor=tk.NW)
-        brws_btn_hover_msg = tix.Balloon(root)
-        brws_btn_hover_msg.bind_widget(self.browse_btn, 
-        balloonmsg="click to browse the directory of the logs")
 
-        for sub in brws_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
+        tooltip.CreateToolTip(self.browse_btn, "click to browse the directory of the logs")
+
         
         self.top_frame.pack(fill=tk.BOTH)
         
@@ -145,12 +143,8 @@ class MainApplication(tk.Frame):
         self.convert_btn = tk.Button(self.sec_top_frame, text='convert', command=lambda:thread_pool_executor.submit(self.log_to_excel_process))
         self.convert_btn.pack(side=tk.LEFT,  anchor=tk.NW)
         self.convert_btn["state"] = "disabled"
-        cnvrt_btn_hover_msg = tix.Balloon(root)
-        cnvrt_btn_hover_msg.bind_widget(self.convert_btn, 
-        balloonmsg="click to start the conversion process")
 
-        for sub in cnvrt_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
+        tooltip.CreateToolTip(self.convert_btn, "click to start the conversion process")
         
         self.sec_top_frame.pack(fill=tk.BOTH)
 
@@ -170,12 +164,7 @@ class MainApplication(tk.Frame):
 
         self.from_time_btn = tk.Button(self.pre_top_up, text="Set From Time", command=lambda:self.set_time(self.from_time_lbl))
 
-        ftime_btn_ballon = tix.Balloon(root)
-        ftime_btn_ballon.bind_widget(self.from_time_btn, 
-        balloonmsg="click to set the 'from time' in 12h format")
-
-        for sub in ftime_btn_ballon.subwidgets_all():
-            sub.config(bg='grey')
+        tooltip.CreateToolTip(self.from_time_btn, "click to set the 'from time' in 12h format")
 
         self.from_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_up.pack(fill=tk.BOTH)
@@ -193,12 +182,7 @@ class MainApplication(tk.Frame):
 
         self.to_time_btn = tk.Button(self.pre_top_down, text="   Set To Time   ", command=lambda:self.set_time(self.to_time_lbl))
 
-        totime_btn_ballon = tix.Balloon(root)
-        totime_btn_ballon.bind_widget(self.to_time_btn, 
-        balloonmsg="click to set the 'to time' in 12h format")
-
-        for sub in totime_btn_ballon.subwidgets_all():
-            sub.config(bg='grey')
+        tooltip.CreateToolTip(self.to_time_btn, "click to set the 'to time' in 12h format")
 
         self.to_time_btn.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
         self.pre_top_down.pack(fill=tk.BOTH)
@@ -215,14 +199,8 @@ class MainApplication(tk.Frame):
         self.export_btn = tk.Button(self.bottom_frame2, text='Export to excel')
         self.export_btn.pack(side=tk.RIGHT)
         self.export_btn["state"] = "disabled"
-        exprt_btn_hover_msg = tix.Balloon(root)
-        exprt_btn_hover_msg.bind_widget(self.export_btn, 
-        balloonmsg="click to start the conversion export process to excel format")
 
-        for sub in exprt_btn_hover_msg.subwidgets_all():
-            sub.config(bg='grey')
-
-
+        tooltip.CreateToolTip(self.export_btn, "click to start the conversion export process to excel format")
 
         self.pb1 = Progressbar(self.bottom_frame, orient=tk.HORIZONTAL, length=300, mode='determinate')
         self.pb1.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.X, expand=True, pady=2, padx=2)
@@ -365,7 +343,7 @@ class MainApplication(tk.Frame):
                             print("empty/none tree")
             global amount_of_nests
             amount_of_nests = len(set_of_trees)
-            print("set of trees: ", set_of_trees)
+            # print("set of trees: ", set_of_trees)
             data_dict, sheet_ids = self.trees_to_excel_data(set_of_trees)
             self.set_buttons_state("normal")
             self.root.update_idletasks()
@@ -431,8 +409,6 @@ class MainApplication(tk.Frame):
         #temp_tn is refering to a temporal test name, and temp_sv is refering to a temporal set of values
         try:
             for trees in set_of_trees.values():
-                print("asmodeos")
-
                 temp_tn, temp_sv = self.dicts_to_excel_data(self.trees_to_dicts(trees))
                 # print("test names: ", temp_tn)
                 # print("test vals: ", temp_sv)
@@ -440,7 +416,6 @@ class MainApplication(tk.Frame):
                     data_dict[tuple(temp_tn)] = temp_sv
                 else:
                     data_dict[tuple([temp_tn, 2])] = temp_sv
-
         except Exception as err:
             show_error(err, "data conversion error")
         return data_dict, list(set_of_trees.keys())
@@ -517,31 +492,31 @@ class MainApplication(tk.Frame):
             
             err_index = len(test_names)
 
-            # if not self.can_show_fails.get():
+            if not self.can_show_fails.get():
 
-            #     err_idxs = []
+                err_idxs = []
                 
-            #     for values in set_of_values:
+                for values in set_of_values:
 
                     
-            #         values = list(values)
+                    values = list(values)
                     
 
-            #         if not values.count("NONE") == len(values) - 2:
-            #             if "NONE" in values:
-            #                 err_idxs.append(values.index("NONE"))
+                    if not values.count("NONE") == len(values) - 2:
+                        if "NONE" in values:
+                            err_idxs.append(values.index("NONE"))
                 
-            #     if len(err_idxs) > 0:
+                if len(err_idxs) > 0:
                 
-            #         err_index = min(err_idxs)
-            #         new_set_of_values = []
-            #         for values in set_of_values:
-            #             new_set_of_values.append(values[:err_index])
-            #             # print("len of new vals: ", len(values[:err_index]))
+                    err_index = min(err_idxs)
+                    new_set_of_values = []
+                    for values in set_of_values:
+                        new_set_of_values.append(values[:err_index])
+                        # print("len of new vals: ", len(values[:err_index]))
                     
-            #         set_of_values = new_set_of_values
-            #         test_names = test_names[:err_index]
-            #         # print("len of new tests_names: ", len(test_names))
+                    set_of_values = new_set_of_values
+                    test_names = test_names[:err_index]
+                    # print("len of new tests_names: ", len(test_names))
             
             for values in set_of_values:
                 print("vals len: ", len(values))
@@ -615,6 +590,9 @@ class MainApplication(tk.Frame):
         new += 0.1
         new = min([new, 100])
         self.pb1['value'] = new
+
+        # pb1_label_text = str(int(0))+'% | ('+ str(idx+1)+"/" + str(amount_of_nests)+")"
+        # self.progress_bar_label.config(text=pb1_label_text)
         
         self.progress_bar_label.config(text=str(int(new)) + '%' + left_bars_text)
 
@@ -1159,6 +1137,8 @@ class TabController:
             tree.destroy()
         self.my_trees = []
         self.my_tn_trees = []
+    
+    
 
     
 
@@ -1272,6 +1252,11 @@ def explore(path):
         subprocess.run([FILEBROWSER_PATH, path])
     elif os.path.isfile(path):
         subprocess.run([FILEBROWSER_PATH, '/select,', os.path.normpath(path)])
+
+
+
+
+
 
 if __name__ == "__main__":
 
