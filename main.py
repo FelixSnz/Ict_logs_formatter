@@ -10,6 +10,7 @@ import pandas as pd
 import glob
 import numpy as np
 import base64
+from selenium import webdriver
 
 from tkinter.filedialog import asksaveasfile, askdirectory
 from tkinter.ttk import Progressbar
@@ -32,6 +33,7 @@ import tooltip
 import dft
 import spc
 import timepicker
+import serialreport
 
 # ------------------- END --------------------------
 
@@ -1013,12 +1015,12 @@ class TabController:
             self.notebook.add(temp_tab, text=tab_name)
 
             tree_scroll = tk.Scrollbar(temp_tab)
-            
             self.my_tn_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set))
-            
             self.my_tn_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
             tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
             tree_scroll.config(command=self.my_tn_trees[-1].yview)
+
+
             self.my_tn_trees[-1]["columns"] = ['Test names']
             self.my_tn_trees[-1]['show'] = 'headings'
             self.my_tn_trees[-1].column('Test names' ,anchor=tk.CENTER, width=190)
@@ -1033,12 +1035,6 @@ class TabController:
             for fail_test in failed_tests:
                 self.my_tn_trees[-1].tag_configure(fail_test, background='red')
 
-            tn_tree_ballon = tix.Balloon(root)
-            tn_tree_ballon.bind_widget(self.my_tn_trees[-1], 
-            balloonmsg="double click a test name to see its SPC analisis chart")
-
-            for sub in tn_tree_ballon.subwidgets_all():
-                sub.config(bg='grey')
 
 
             # print("setvals: ", set_of_values)
@@ -1048,49 +1044,66 @@ class TabController:
                                                             limits = test_limits,
                                                             :self.tree_click_event(tn, sv, limits))
             
-            test_names_copy = test_names[:8].copy()
-            test_names_copy.append("...")
-            self.my_trees.append(tk.ttk.Treeview(temp_tab))
-            self.my_trees[-1]
-            self.my_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
 
+            values_trees_scroll = tk.Scrollbar(temp_tab)
+            self.my_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=values_trees_scroll.set))
+            self.my_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
+            values_trees_scroll.pack(side=tk.LEFT, fill=tk.Y)
+            values_trees_scroll.config(command=self.my_trees[-1].yview)
+
+
+            # tree_scroll = tk.Scrollbar(temp_tab)
+            # self.my_tn_trees.append(tk.ttk.Treeview(temp_tab, yscrollcommand=tree_scroll.set))
+            # self.my_tn_trees[-1].pack(fill=tk.BOTH, expand=tk.TRUE, side=tk.LEFT)
+            # tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
+            # tree_scroll.config(command=self.my_tn_trees[-1].yview)
+
+
+            test_names_copy = test_names[:7].copy()
+            test_names_copy.append("...")
             self.my_trees[-1]["columns"] = test_names_copy
             self.my_trees[-1]['show'] = 'headings'
 
+            
 
             for idx, test_name in enumerate(test_names_copy):
                 self.my_trees[-1].column(test_name ,anchor=tk.CENTER, width=190)
                 self.my_trees[-1].heading(test_name,text=test_name)
 
             
-            for idx, vals in enumerate(np.array(set_of_values)[:10,:8]):
+            for idx, vals in enumerate(np.array(set_of_values)[:,:7]):
                 new_vals = list(vals)
                 new_vals.append("...")
-                self.my_trees[-1].insert(parent='',index='end',iid=idx,text='', values=new_vals) 
+                self.my_trees[-1].insert(parent='',index='end',iid=idx,text='', values=new_vals)
+            
+
+            self.my_trees[-1].bind('<Double-1>', lambda event:self.on_values_tree_click(event))
             
         except Exception as err:
             show_error(err, "tab creation error")
 
 
-        
+    
+    def on_values_tree_click(self, event):
+        item = self.my_trees[self.tab_index].focus()
+        if item != "":
+            info = self.my_trees[self.tab_index].item(item, 'values')
+            serial = info[0]
+            thread_pool_executor.submit(serialreport.show(serial))
+
     
     def tree_click_event(self, tn, sv, limits):
         set_of_vals = list(np.array(sv)[:])
         
-        # print("vals : ", sv)
         try:
             item = self.my_tn_trees[self.tab_index].focus()
-            # print("this is the item: ", item)
-            # print("this is the item: ", item)
+
             if item != "":
                 info = self.my_tn_trees[self.tab_index].item(item, 'values')
                 test_name = info[0]
                 limits = lf.get_test_limits(tn, limits, test_name)
 
                 test_values, serials, dates = lf.get_test_values(tn, set_of_vals, test_name)
-                # print("serials before :", serials)
-                # print("dates before :", dates)
-
                 spc.plot(test_values, test_name, limits, serials, dates)
         except Exception as err:
             show_error(err, "show spc error")
@@ -1145,9 +1158,6 @@ def convert_to_dataframe(data, cols):
 
         for col in cols:
             new_cols.append(list(col))
-            # print(str(len(col))+": ", col)
-
-        # print("Data: ", data)
 
         df = pd.DataFrame(data, columns = new_cols)
         df.index = np.arange(1, len(df)+1)
