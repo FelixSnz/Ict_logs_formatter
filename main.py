@@ -41,6 +41,7 @@ amount_of_nests = 0
 thread_pool_executor = futures.ThreadPoolExecutor(max_workers=5)
 has_limits = True
 nest_numbers = []
+failed_tests = []
 
 units = {
     "JUM":"?",
@@ -471,10 +472,6 @@ class MainApplication(tk.Frame):
                 low_limits = lf.get_limits(dicts)
                 low_limits.insert(1, "")
                 header_labels.append(tuple(low_limits[:err_index]))
-
-                # print("ll no err idx: ", len(low_limits))
-                # print("whit err idx: ", len(low_limits[:err_index]))
-                # print("ll len: ", len(low_limits))
             
                 high_limits = lf.get_limits(dicts, False)
                 high_limits.insert(1, "")
@@ -771,7 +768,9 @@ class MainApplication(tk.Frame):
                                                             return None
                                                         else:
                                                             pass
-                                                            # temp_comp_node.value = "FAILED"
+                                                            global failed_tests
+                                                            failed_tests.append(t_name)
+                                                            temp_comp_node.value += ", FAILED"
 
                                                             # print("node name: ", temp_comp_node.value)
 
@@ -850,12 +849,12 @@ class MainApplication(tk.Frame):
 
             file = asksaveasfile(filetypes = files, defaultextension = files)
             if file != None:
-                for key, value in data_dict.items():
+                for keys, values in data_dict.items():
 
-                    if key[1] == 2:
-                        key = key[0]
+                    if keys[1] == 2:
+                        keys = keys[0]
                     self.status_label.config(text="sorting the data...",  fg='black')
-                    df = convert_to_dataframe(value, key)
+                    df = convert_to_dataframe(values, keys)
                     dfs.append(df)
                 
                 new_dfs = []
@@ -877,8 +876,35 @@ class MainApplication(tk.Frame):
                         nest_id = ids[idx]
                         if not str(nest_id) == str:
                             nest_id = str(nest_id)
+                        
+                        def set_color(val):
+                            val = str(val)
+                            # print("this is the val of func: ", val)
+                            if "FAILED" in val:
+                                if val.split(",")[1] == " FAILED":
+                                    return 'background-color:red;text:%s;' % val.split(",")[0]
+                                else:
+                                    return 'background-color:white;text:0;'
+                            else:
+                                return 'background-color:white;text:0;'
+                        
+                        # def remove_failed_str(val):
+                        #     str_val = str(val)
+                        #     if "FAILED" in str_val:
+                        #         val = str_val.split(",")[0]
+                        #         return val
+                        #     else:
+                        #         return val
 
-                        df.to_excel(writer, sheet_name='Nido '+ nest_id )
+
+                        
+                        # print(type(df))
+                        styled = df.style.applymap(lambda v: set_color(v))
+                        
+                        # styled = styled.data.applymap(lambda val: remove_failed_str(val))
+                        # print("styled: ", styled)
+
+                        styled.to_excel(writer, sheet_name='Nido '+ nest_id, engine='openpyxl')
                 
                 self.pb1.stop()
 
@@ -909,6 +935,10 @@ class MainApplication(tk.Frame):
 
         self.quit()
         self.destroy()
+    
+    def highlight_cells(self):
+        # provide your criteria for highlighting the cells here
+        return ['background-color: yellow']
 
 
             
@@ -996,8 +1026,12 @@ class TabController:
 
             for idx, test_name in enumerate(test_names[2:]):
                 a = self.my_tn_trees[-1].insert(parent='',index='end',iid=idx,text='aaa', values=test_name, tags=test_name)
-                self.my_tn_trees[-1].tag_configure('1%c2', background='purple')
-                
+
+            
+            global failed_tests
+
+            for fail_test in failed_tests:
+                self.my_tn_trees[-1].tag_configure(fail_test, background='red')
 
             tn_tree_ballon = tix.Balloon(root)
             tn_tree_ballon.bind_widget(self.my_tn_trees[-1], 

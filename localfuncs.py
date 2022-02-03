@@ -114,7 +114,11 @@ def get_maxs(dicts):
                 if bool(dict) and test_name in list(dict.keys()):
                     # print("this is the dict: ", dict)
                     val = dict[test_name][0]
-                    if val != "FAILED":
+                    if "," in val:
+                        val = val.split(",")[0]
+                        print("this is the val: ", val)
+                        values.append(val)
+                    else:
                         values.append(val)
             dict_results[test_name] = values
 
@@ -124,6 +128,7 @@ def get_maxs(dicts):
 
         for val in vals:
             print("this is val: ", val)
+
             maxims.append(max(to_float(val)))
         
         # print(maxims)
@@ -149,7 +154,9 @@ def get_mins(dicts):
         for dict in get_dicts_only(dicts):
             if bool(dict) and test_name in list(dict.keys()):
                 val = dict[test_name][0]
-                if val != "FAILED":
+                if "," in val:
+                    values.append(val.split(",")[0])
+                else:
                     values.append(val)
         dict_results[test_name] = values
 
@@ -181,7 +188,9 @@ def get_means(dicts):
         for dict in get_dicts_only(dicts):
             if bool(dict) and test_name in list(dict.keys()):
                 val = dict[test_name][0]
-                if val != "FAILED":
+                if "," in val:
+                    values.append(val.split(",")[0])
+                else:
                     values.append(val)
         dict_results[test_name] = values
 
@@ -189,7 +198,7 @@ def get_means(dicts):
     vals = list(dict_results.values())
 
     for val in vals:
-        print(val)
+        # print(val)
 
         means.append(mean(to_float(val)))
     

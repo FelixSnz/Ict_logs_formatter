@@ -95,8 +95,14 @@ def plot(x, t_name, limits, s, d):
 
 
 
-
-        x = np.array(x).astype(np.float)
+        new_x = []
+        for val in x:
+            if " FAILED" in val:
+                new_x.append(val.split(",")[0])
+            else:
+                new_x.append(val)
+            print("this is a val of x: ", val)
+        x = np.array(new_x).astype(np.float)
         x_bar = x
 
         # Define list variable for groups ranges
